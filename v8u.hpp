@@ -176,7 +176,7 @@ template <class T> void SetPersistent(Persistent<T>& handle, Handle<T> value) {
   handle = Persistent<T>::New(value);
 }
 
-Persistent<Value> Persist(Handle<Value>& handle) {
+Persistent<Value> Persist(Handle<Value> handle) {
   return Persistent<Value>::New(handle);
 }
 
