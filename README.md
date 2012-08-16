@@ -72,6 +72,7 @@ NODE_DEF_MAIN() {
 } NODE_DEF_MAIN_END(simpleaddon)
 ```
 
+And that's just scratching the surface of what V8U provides.  
 What's more, V8U cares about exception wrapping, persistent handles, and other
 things for you!
 
@@ -87,4 +88,6 @@ using namespace v8u;
 
 Now, let the fun begin!
 
-<!-- TODO: explain syntax and macros -->
+TODO: explain syntax and macros  
+For now, you can [look at Robotskirt](https://github.com/benmills/robotskirt/blob/unstable/src/robotskirt.cc#L512) to see
+a usage example.
