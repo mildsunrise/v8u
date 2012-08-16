@@ -1,18 +1,16 @@
-# V8U[tilities]
-# _Sugar for your Node C++ addons_
+# V8U[tilities]<br/><small>Sugar for your Node C++ addons</small>
 
 Have you ever written a C/C++ addon for Node.JS?  
 If you have, you probably are tired of writing so much
-code for just having the skeleton of it. Sure, the V8 syntax
-is very **verbose** and repetitive.
+code for just having the skeleton of it.  
+Sure, the V8 syntax is very **verbose** and repetitive.
 
 With V8U, that will change.
 
 ## Enough talking, show me code!
 
-Here we have a simple module which exposes _one_ class `Hello`,
-with _one_ method, `world`. It takes _one_ string as argument,
-and just returns it untouched.
+Here we have a simple module which exposes _one_ class `Hello`, with _one_ method, `world`.  
+It takes _one_ string as argument, and just returns it untouched.
 
 ```C++
 class Hello : public ObjectWrap {
