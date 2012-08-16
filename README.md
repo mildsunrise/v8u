@@ -52,12 +52,10 @@ With V8U, things start to look better:
 ```C++
 class Hello : public ObjectWrap {
 public:
-  //The constructor
   V8_CL_CTOR(Hello, 0) {
     inst = new Hello;
   } V8_CL_CTOR_END()
-  
-  //The world() method
+
   V8_CL_CALLBACK(Hello, World, 1) {
     if (!args[0]->IsString())
       V8_THROW(TypeErr("Arg must be a string!"));
@@ -79,7 +77,7 @@ things for you!
 
 ## How to use
 
-To use V8U, simply copy the HPP into your project.
+To use V8U, simply copy the HPP file into your project.  
 Then include it:
 
 ```C++
@@ -89,4 +87,4 @@ using namespace v8u;
 
 Now, let the fun begin!
 
-TODO: explain syntax and macros
+<!-- TODO: explain syntax and macros -->
