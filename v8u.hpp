@@ -1,4 +1,4 @@
-/* 
+/*
  * V8Utilities - Sugar for your Node C++ addons
  * Copyright (c) 2012, Xavier Mendez
  * All rights reserved.

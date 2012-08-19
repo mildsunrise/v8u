@@ -1,18 +1,16 @@
-# V8U[tilities]
-# _Sugar for your Node C++ addons_
+# V8U[tilities]<br/><small>Sugar for your Node C++ addons</small>
 
 Have you ever written a C/C++ addon for Node.JS?  
 If you have, you probably are tired of writing so much
-code for just having the skeleton of it. Sure, the V8 syntax
-is very **verbose** and repetitive.
+code for just having the skeleton of it.  
+Sure, the V8 syntax is very **verbose** and repetitive.
 
 With V8U, that will change.
 
 ## Enough talking, show me code!
 
-Here we have a simple module which exposes _one_ class `Hello`,
-with _one_ method, `world`. It takes _one_ string as argument,
-and just returns it untouched.
+Here we have a simple module which exposes _one_ class `Hello`, with _one_ method, `world`.  
+It takes _one_ string as argument, and just returns it untouched.
 
 ```C++
 class Hello : public ObjectWrap {
@@ -54,12 +52,10 @@ With V8U, things start to look better:
 ```C++
 class Hello : public ObjectWrap {
 public:
-  //The constructor
   V8_CL_CTOR(Hello, 0) {
     inst = new Hello;
   } V8_CL_CTOR_END()
-  
-  //The world() method
+
   V8_CL_CALLBACK(Hello, World, 1) {
     if (!args[0]->IsString())
       V8_THROW(TypeErr("Arg must be a string!"));
@@ -76,12 +72,13 @@ NODE_DEF_MAIN() {
 } NODE_DEF_MAIN_END(simpleaddon)
 ```
 
+And that's just scratching the surface of what V8U provides.  
 What's more, V8U cares about exception wrapping, persistent handles, and other
 things for you!
 
 ## How to use
 
-To use V8U, simply copy the HPP into your project.
+To use V8U, simply copy the HPP file into your project.  
 Then include it:
 
 ```C++
@@ -91,4 +88,6 @@ using namespace v8u;
 
 Now, let the fun begin!
 
-TODO: explain syntax and macros
+TODO: explain syntax and macros  
+For now, you can [look at Robotskirt](https://github.com/benmills/robotskirt/blob/unstable/src/robotskirt.cc#L512) to see
+a usage example.
