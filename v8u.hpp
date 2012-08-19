@@ -172,7 +172,7 @@ template <class T> inline void SetPersistent(v8::Persistent<T>& handle, v8::Hand
   handle = v8::Persistent<T>::New(value);
 }
 
-inline v8::Persistent<v8::Value> Persist(v8::Handle<v8::Value>& handle) {
+inline v8::Persistent<v8::Value> Persist(v8::Handle<v8::Value> handle) {
   return v8::Persistent<v8::Value>::New(handle);
 }
 
