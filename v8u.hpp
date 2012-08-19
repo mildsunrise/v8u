@@ -84,7 +84,7 @@ namespace v8u {
 
 // JS arguments
 
-void CheckArguments(int min, const v8::Arguments& args) {
+inline void CheckArguments(int min, const v8::Arguments& args) {
   if (args.Length() < min)
     throw v8::Persistent<v8::Value>::New(v8::Exception::RangeError(v8::String::New("Not enough arguments.")));
 }
@@ -160,50 +160,50 @@ V8_WRAP_END()
 
 // Dealing with V8 persistent handles
 
-template <class T> void ClearPersistent(v8::Persistent<T>& handle) {
+template <class T> inline void ClearPersistent(v8::Persistent<T>& handle) {
   if (handle.IsEmpty()) return;
   handle.Dispose();
   handle.Clear();
 }
 
-template <class T> void SetPersistent(v8::Persistent<T>& handle, v8::Handle<T> value) {
+template <class T> inline void SetPersistent(v8::Persistent<T>& handle, v8::Handle<T> value) {
   ClearPersistent<T>(handle);
   if (value.IsEmpty()) return;
   handle = v8::Persistent<T>::New(value);
 }
 
-v8::Persistent<v8::Value> Persist(v8::Handle<v8::Value>& handle) {
+inline v8::Persistent<v8::Value> Persist(v8::Handle<v8::Value>& handle) {
   return v8::Persistent<v8::Value>::New(handle);
 }
 
 // Type shortcuts
 
-v8::Local<v8::Integer> Int(int32_t integer) {
+inline v8::Local<v8::Integer> Int(int32_t integer) {
   return v8::Integer::New(integer);
 }
 
-v8::Local<v8::Integer> Uint(uint32_t integer) {
+inline v8::Local<v8::Integer> Uint(uint32_t integer) {
   return v8::Integer::NewFromUnsigned(integer);
 }
 
-v8::Local<v8::String> Str(const char* data) {
+inline v8::Local<v8::String> Str(const char* data) {
   return v8::String::New(data);
 }
 
-v8::Local<v8::String> Str(std::string str) {
+inline v8::Local<v8::String> Str(std::string str) {
   return v8::String::New(str.data(), str.length());
 }
 
-v8::Local<v8::String> Symbol(const char* data) {
+inline v8::Local<v8::String> Symbol(const char* data) {
   return v8::String::NewSymbol(data);
 }
 
-v8::Local<v8::Object> Obj() {
+inline v8::Local<v8::Object> Obj() {
   return v8::Object::New();
 }
 
 #define __V8_ERROR_CTOR(ERROR)                                                 \
-v8::Local<v8::Value> ERROR##Err(const char* msg) {                             \
+inline v8::Local<v8::Value> ERROR##Err(const char* msg) {                      \
   return v8::Exception::ERROR##Error(v8::String::New(msg));                    \
 }
 
@@ -213,37 +213,37 @@ __V8_ERROR_CTOR(Reference)
 __V8_ERROR_CTOR(Syntax)
 __V8_ERROR_CTOR(Type)
 
-v8::Local<v8::Number> Num(double number) {
+inline v8::Local<v8::Number> Num(double number) {
   return v8::Number::New(number);
 }
 
-v8::Handle<v8::Boolean> Bool(bool boolean) {
+inline v8::Handle<v8::Boolean> Bool(bool boolean) {
   return v8::Boolean::New(boolean);
 }
 
-v8::Local<v8::FunctionTemplate> Func(v8::InvocationCallback function) {
+inline v8::Local<v8::FunctionTemplate> Func(v8::InvocationCallback function) {
   return v8::FunctionTemplate::New(function);
 }
 
 // Type casting/unwraping shortcuts
 
-double Num(v8::Local<v8::Value> hdl) {
+inline double Num(v8::Local<v8::Value> hdl) {
   return hdl->NumberValue();
 }
 
-int64_t Int(v8::Local<v8::Value> hdl) {
+inline int64_t Int(v8::Local<v8::Value> hdl) {
   return hdl->IntegerValue();
 }
 
-uint32_t Uint(v8::Local<v8::Value> hdl) {
+inline uint32_t Uint(v8::Local<v8::Value> hdl) {
   return hdl->Uint32Value();
 }
 
-v8::Local<v8::Object> Obj(v8::Local<v8::Value> hdl) {
+inline v8::Local<v8::Object> Obj(v8::Local<v8::Value> hdl) {
   return v8::Local<v8::Object>::Cast(hdl);
 }
 
-bool Bool(v8::Local<v8::Value> hdl) {
+inline bool Bool(v8::Local<v8::Value> hdl) {
   return hdl->BooleanValue();
 }
 
