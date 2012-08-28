@@ -66,33 +66,33 @@ public:
 
   V8_CL_CALLBACK(Version, ToString, 0) {
     return scope.Close(Str(inst->toString()));
-  } V8_WRAP_END()
+  } V8_CALLBACK_END()
 
   V8_CL_CALLBACK(Version, Inspect, 0) {
     return scope.Close(Str("<Version "+inst->toString()+">"));
-  } V8_WRAP_END()
+  } V8_CALLBACK_END()
 
   //Getters
   V8_CL_GETTER(Version, Major) {
     return scope.Close(Int(inst->major_));
-  } V8_WRAP_END()
+  } V8_GETTER_END()
   V8_CL_GETTER(Version, Minor) {
     return scope.Close(Int(inst->minor_));
-  } V8_WRAP_END()
+  } V8_GETTER_END()
   V8_CL_GETTER(Version, Revision) {
     return scope.Close(Int(inst->revision_));
-  } V8_WRAP_END()
+  } V8_GETTER_END()
 
   //Setters
   V8_CL_SETTER(Version, Major) {
     inst->major_ = Int(value);
-  } V8_WRAP_END_NR()
+  } V8_SETTER_END()
   V8_CL_SETTER(Version, Minor) {
     inst->minor_ = Int(value);
-  } V8_WRAP_END_NR()
+  } V8_SETTER_END()
   V8_CL_SETTER(Version, Revision) {
     inst->revision_ = Int(value);
-  } V8_WRAP_END_NR()
+  } V8_SETTER_END()
 
   NODE_DEF_TYPE("Version") {
     V8_DEF_PROP(Major, "major");

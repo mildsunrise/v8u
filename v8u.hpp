@@ -61,8 +61,7 @@ namespace v8u {
     return ThrowException(v8::Exception::Error(v8::String::New(err.data(), err.length())));\
   } catch (...) {                                                              \
     return ThrowException(v8::Exception::Error(v8::String::New("Unknown error!")));\
-  }                                                                            \
-}
+  }
 
 #define V8_WRAP_END_NR()                                                       \
   } catch (v8::Persistent<v8::Value>& err) {                                   \
@@ -79,8 +78,7 @@ namespace v8u {
     ThrowException(v8::Exception::Error(v8::String::New(err.data(), err.length())));\
   } catch (...) {                                                              \
     ThrowException(v8::Exception::Error(v8::String::New("Unknown error!")));   \
-  }                                                                            \
-}
+  }
 
 // JS arguments
 
@@ -91,20 +89,35 @@ inline void CheckArguments(int min, const v8::Arguments& args) {
 
 // V8 callback templates
 
+#define V8_S_CALLBACK(IDENTIFIER)                                              \
+  v8::Handle<v8::Value> IDENTIFIER(const v8::Arguments& args)
+
 #define V8_CALLBACK(IDENTIFIER, MIN)                                           \
-v8::Handle<v8::Value> IDENTIFIER(const v8::Arguments& args) {                  \
+V8_S_CALLBACK(IDENTIFIER) {                                                    \
   V8_WRAP_START()                                                              \
     CheckArguments(MIN, args);
 
+#define V8_CALLBACK_END() V8_WRAP_END() }
+
+#define V8_S_GETTER(IDENTIFIER)                                                \
+  v8::Handle<v8::Value> IDENTIFIER(v8::Local<v8::String> name,                 \
+                                   const v8::AccessorInfo& info)
+
 #define V8_GETTER(IDENTIFIER)                                                  \
-v8::Handle<v8::Value> IDENTIFIER(v8::Local<v8::String> name,                   \
-                                 const v8::AccessorInfo& info) {               \
+V8_S_GETTER(IDENTIFIER) {                                                      \
   V8_WRAP_START()
 
+#define V8_GETTER_END() V8_WRAP_END() }
+
+#define V8_S_SETTER(IDENTIFIER)                                                \
+  void IDENTIFIER(v8::Local<v8::String> name, v8::Local<v8::Value> value,      \
+                  const v8::AccessorInfo& info)
+
 #define V8_SETTER(IDENTIFIER)                                                  \
-void IDENTIFIER(v8::Local<v8::String> name, v8::Local<v8::Value> value,        \
-                const v8::AccessorInfo& info) {                                \
+V8_S_SETTER(IDENTIFIER) {                                                      \
   V8_WRAP_START()
+
+#define V8_SETTER_END() V8_WRAP_END_NR() }
 
 #define V8_UNWRAP(CPP_TYPE, OBJ)                                               \
   CPP_TYPE* inst = node::ObjectWrap::Unwrap<CPP_TYPE>(OBJ.Holder());
@@ -112,21 +125,21 @@ void IDENTIFIER(v8::Local<v8::String> name, v8::Local<v8::Value> value,        \
 // Class-specific templates
 
 #define V8_CL_CTOR(CPP_TYPE, MIN)                                              \
-static v8::Handle<v8::Value> NewInstance(const v8::Arguments& args) {          \
-  V8_WRAP_START()                                                              \
+static V8_S_CALLBACK(NewInstance) {                                            \
   if ((args.Length()==1) && (args[0]->IsExternal())) {                         \
     ((CPP_TYPE*)v8::External::Unwrap(args[0]))->Wrap(args.This());             \
-    return scope.Close(args.This());                                           \
+    return args.This();                                                        \
   }                                                                            \
   if (!args.IsConstructCall())                                                 \
-    throw v8::Persistent<v8::Value>::New(v8::Exception::ReferenceError(v8::String::New("You must call this as a constructor")));\
+    return v8::ThrowException(v8u::ReferenceErr("You must call this as a constructor"));\
+  V8_WRAP_START()                                                              \
   CheckArguments(MIN, args);                                                   \
   CPP_TYPE* inst;
 
 #define V8_CL_CTOR_END()                                                       \
   inst->Wrap(args.This());                                                     \
   return scope.Close(args.This());                                             \
-V8_WRAP_END()
+V8_CALLBACK_END()
 
 #define V8_CL_GETTER(CPP_TYPE, CPP_VAR)                                        \
   static V8_GETTER(Getter__##CPP_VAR)                                          \
