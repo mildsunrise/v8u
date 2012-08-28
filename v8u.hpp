@@ -281,21 +281,21 @@ inline bool Bool(v8::Handle<v8::Value> hdl) {
 
 // Defining things
 
-#define V8_DEF_TYPE(CPP_TYPE, V8_NAME)                                         \
+#define V8_DEF_TYPE(V8_NAME)                                                   \
   v8::Persistent<v8::FunctionTemplate> prot = v8::Persistent<v8::FunctionTemplate>::New(\
-      v8::FunctionTemplate::New(CPP_TYPE::NewInstance));                       \
+      v8::FunctionTemplate::New(NewInstance));                                 \
   v8::Handle<v8::String> __cname = v8::String::NewSymbol(V8_NAME);             \
   prot->SetClassName(__cname);                                                 \
   prot->InstanceTemplate()->SetInternalFieldCount(1);
 
-#define V8_DEF_PROP(CPP_TYPE, CPP_VAR, V8_NAME)                                \
-  prot->InstanceTemplate()->SetAccessor(NODE_PSYMBOL(V8_NAME), CPP_TYPE::Getter__##CPP_VAR, CPP_TYPE::Setter__##CPP_VAR);
+#define V8_DEF_PROP(CPP_VAR, V8_NAME)                                          \
+  prot->InstanceTemplate()->SetAccessor(NODE_PSYMBOL(V8_NAME), Getter__##CPP_VAR, Setter__##CPP_VAR);
 
-#define V8_DEF_RPROP(CPP_TYPE, CPP_VAR, V8_NAME)                               \
-  prot->InstanceTemplate()->SetAccessor(NODE_PSYMBOL(V8_NAME), CPP_TYPE::Getter__##CPP_VAR);
+#define V8_DEF_RPROP(CPP_VAR, V8_NAME)                                         \
+  prot->InstanceTemplate()->SetAccessor(NODE_PSYMBOL(V8_NAME), Getter__##CPP_VAR);
 
-#define V8_DEF_METHOD(CPP_TYPE, CPP_METHOD, V8_NAME)                           \
-  NODE_SET_PROTOTYPE_METHOD(prot, V8_NAME, CPP_TYPE::CPP_METHOD);
+#define V8_DEF_METHOD(CPP_METHOD, V8_NAME)                                     \
+  NODE_SET_PROTOTYPE_METHOD(prot, V8_NAME, CPP_METHOD);
 
 #define V8_INHERIT(CLASSNAME) prot->Inherit(GetTemplate(CLASSNAME));
 
@@ -304,10 +304,10 @@ inline bool Bool(v8::Handle<v8::Value> hdl) {
 #define NODE_DEF(IDENTIFIER)                                                   \
   void IDENTIFIER(v8::Handle<v8::Object> target)
 
-#define NODE_DEF_TYPE(CPP_TYPE, V8_NAME)                                       \
-  NODE_DEF(init##CPP_TYPE) {                                                   \
+#define NODE_DEF_TYPE(V8_NAME)                                                 \
+  inline static NODE_DEF(init) {                                               \
     v8::HandleScope scope;                                                     \
-    V8_DEF_TYPE(CPP_TYPE, V8_NAME)
+    V8_DEF_TYPE(V8_NAME)
 
 #define NODE_DEF_TYPE_END()                                                    \
     target->Set(__cname, prot->GetFunction());                                 \

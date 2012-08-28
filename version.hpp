@@ -93,20 +93,20 @@ public:
   V8_CL_SETTER(Version, Revision) {
     inst->revision_ = Int(value);
   } V8_WRAP_END_NR()
+
+  NODE_DEF_TYPE("Version") {
+    V8_DEF_PROP(Major, "major");
+    V8_DEF_PROP(Minor, "minor");
+    V8_DEF_PROP(Revision, "revision");
+
+    V8_DEF_METHOD(ToString, "toString");
+    V8_DEF_METHOD(Inspect, "inspect");
+
+    StoreTemplate("v8u::Version", prot);
+  } NODE_DEF_TYPE_END()
 private:
   int major_, minor_, revision_;
 };
-
-NODE_DEF_TYPE(Version, "Version") {
-  V8_DEF_PROP(Version, Major, "major");
-  V8_DEF_PROP(Version, Minor, "minor");
-  V8_DEF_PROP(Version, Revision, "revision");
-
-  V8_DEF_METHOD(Version, ToString, "toString");
-  V8_DEF_METHOD(Version, Inspect, "inspect");
-
-  StoreTemplate("v8u::Version", prot);
-} NODE_DEF_TYPE_END()
 
 };
 
