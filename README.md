@@ -52,20 +52,20 @@ With V8U, things start to look better:
 ```C++
 class Hello : public ObjectWrap {
 public:
-  V8_CL_CTOR(Hello, 0) {
+  V8_CL_CTOR(Hello) {
     inst = new Hello;
   } V8_CL_CTOR_END()
 
-  V8_CL_CALLBACK(Hello, World, 1) {
-    if (!args[0]->IsString())
-      V8_THROW(TypeErr("Arg must be a string!"));
+  V8_CL_CALLBACK(Hello, World) {
+    CheckArguments(1, args);
+    if (!args[0]->IsString()) V8_THROW(TypeErr("Arg must be a string!"));
     return scope.Close(args[0]);
-  } V8_WRAP_END()
+  } V8_CALLBACK_END()
+  
+  NODE_DEF_TYPE("Hello") {
+    NODE_DEF_METHOD(World, "world");
+  } NODE_DEF_TYPE_END()
 };
-
-NODE_DEF_TYPE(Hello, "Hello") {
-  NODE_DEF_METHOD(Hello, World, "world");
-} NODE_DEF_TYPE_END()
 
 NODE_DEF_MAIN() {
   initHello(target);
@@ -89,5 +89,5 @@ using namespace v8u;
 Now, let the fun begin!
 
 TODO: explain syntax and macros  
-For now, you can [look at Robotskirt](https://github.com/benmills/robotskirt/blob/unstable/src/robotskirt.cc#L512) to see
+For now, you can [look at Robotskirt](https://github.com/benmills/robotskirt/blob/unstable/src/robotskirt.cc) to see
 a usage example.
