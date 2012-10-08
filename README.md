@@ -17,6 +17,7 @@ class Hello : public ObjectWrap {
 public:
   //The constructor
   static Handle<Value> NewInstance(const Arguments& args) {
+    HandleScope scope;
     if (!args.IsConstructCall())
       return ThrowException(Exception::Error(String::New("Not called as constructor!")));
     Hello* instance = new Hello;
@@ -26,6 +27,7 @@ public:
 
   //The world() method
   static Handle<Value> World(const Arguments& args) {
+    HandleScope scope;
     if (args.Length() < 1)
       return ThrowException(Exception::RangeError(String::New("Not enough arguments!")));
     if (!args[0]->IsString())
@@ -36,6 +38,7 @@ public:
 
 extern "C" {
   static void initHello(Handle<Object> target) {
+    HandleScope scope;
     Local<FunctionTemplate> protL = FunctionTemplate::New(Hello::NewInstance);
     Persistent<FunctionTemplate> prot = Persistent<FunctionTemplate>::New(protL);
     prot->InstanceTemplate()->SetInternalFieldCount(1);
