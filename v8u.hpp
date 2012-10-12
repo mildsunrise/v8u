@@ -152,10 +152,10 @@ V8_CALLBACK_END()
     V8_UNWRAP(CPP_TYPE, args)
 
 #define V8_TYPE(CLASSNAME)                                                     \
-  static const char* __classname = CLASSNAME;                                  \
+  static std::string __classname(){return CLASSNAME;}                          \
   /**
    * Returns the unique V8 v8::Object corresponding to this C++ instance.
-   * For this to work, you should use V8_CONSTRUCTOR.
+   * For this to work, you should use V8_CL_CTOR.
    *
    * CALLING Wrapped() WITHIN A CONSTRUCTOR MAY YIELD UNEXPECTED RESULTS,
    * EVENTUALLY MAKING YOU BASH YOUR HEAD AGAINST A WALL. YOU HAVE BEEN WARNED.
@@ -165,13 +165,13 @@ V8_CALLBACK_END()
                                                                                \
     if (handle_.IsEmpty()) {                                                   \
       v8::Handle<v8::Value> args [1] = {v8::External::New(this)};              \
-      v8u::GetTemplate(__classname)->GetFunction()->NewInstance(1,args);       \
+      v8u::GetTemplate(__classname())->GetFunction()->NewInstance(1,args);     \
     }                                                                          \
     return scope.Close(handle_);                                               \
   }                                                                            \
   static bool HasInstance(v8::Handle<v8::Object> obj) {                        \
     v8::HandleScope scope;                                                     \
-    return v8u::GetTemplate(__classname)->HasInstance(obj);                    \
+    return v8u::GetTemplate(__classname())->HasInstance(obj);                  \
   }
 
 // Dealing with V8 persistent handles
@@ -350,7 +350,7 @@ inline bool Bool(v8::Handle<v8::Value> hdl) {
   NODE_DEF_TYPE(V8_NAME)
 
 #define NODE_TYPE_END()                                                        \
-    v8u::StoreTemplate(__classname, prot);                                     \
+    v8u::StoreTemplate(__classname(), prot);                                   \
   NODE_DEF_TYPE_END()
 
 // Storing templates for later use
