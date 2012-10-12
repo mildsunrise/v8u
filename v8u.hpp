@@ -151,7 +151,8 @@ V8_CALLBACK_END()
   static V8_CALLBACK(IDENTIFIER)                                               \
     V8_UNWRAP(CPP_TYPE, args)
 
-#define V8_CL_WRAPPER(CLASSNAME)                                               \
+#define V8_TYPE(CLASSNAME)                                                     \
+  static const char* __classname = CLASSNAME;                                  \
   /**
    * Returns the unique V8 v8::Object corresponding to this C++ instance.
    * For this to work, you should use V8_CONSTRUCTOR.
@@ -164,9 +165,13 @@ V8_CALLBACK_END()
                                                                                \
     if (handle_.IsEmpty()) {                                                   \
       v8::Handle<v8::Value> args [1] = {v8::External::New(this)};              \
-      v8u::GetTemplate(CLASSNAME)->GetFunction()->NewInstance(1,args);         \
+      v8u::GetTemplate(__classname)->GetFunction()->NewInstance(1,args);       \
     }                                                                          \
     return scope.Close(handle_);                                               \
+  }                                                                            \
+  static bool HasInstance(v8::Handle<v8::Object> obj) {                        \
+    v8::HandleScope scope;                                                     \
+    return v8u::GetTemplate(__classname)->HasInstance(obj);                    \
   }
 
 // Dealing with V8 persistent handles
@@ -312,8 +317,22 @@ inline bool Bool(v8::Handle<v8::Value> hdl) {
 
 // Templates for definition methods on Node
 
+//// Generic define function
+
 #define NODE_DEF(IDENTIFIER)                                                   \
   void IDENTIFIER(v8::Handle<v8::Object> target)
+
+//// Module define function
+
+#define NODE_DEF_MAIN()                                                        \
+  extern "C" {                                                                 \
+    NODE_DEF(init) {                                                           \
+      v8::HandleScope scope;
+
+#define NODE_DEF_MAIN_END(MODULE) }                                            \
+    NODE_MODULE(MODULE, init); }
+
+//// Type (class) define function
 
 #define NODE_DEF_TYPE(V8_NAME)                                                 \
   inline static NODE_DEF(init) {                                               \
@@ -324,13 +343,15 @@ inline bool Bool(v8::Handle<v8::Value> hdl) {
     target->Set(__cname, prot->GetFunction());                                 \
   }
 
-#define NODE_DEF_MAIN()                                                        \
-  extern "C" {                                                                 \
-    NODE_DEF(init) {                                                           \
-      v8::HandleScope scope;
+//// V8_TYPE + NODE_DEF_TYPE = NODE_TYPE
 
-#define NODE_DEF_MAIN_END(MODULE) }                                            \
-    NODE_MODULE(MODULE, init); }
+#define NODE_TYPE(CLASSNAME, V8_NAME)                                          \
+  V8_TYPE(CLASSNAME)                                                           \
+  NODE_DEF_TYPE(V8_NAME)
+
+#define NODE_TYPE_END()                                                        \
+    v8u::StoreTemplate(__classname, prot);                                     \
+  NODE_DEF_TYPE_END()
 
 // Storing templates for later use
 
