@@ -5,18 +5,26 @@ If you have, you probably are tired of writing so much
 code for just having the skeleton of it.  
 Sure, the V8 syntax is very **verbose** and repetitive.
 
-With V8U, that will change.
+With V8U, that will change.  
+V8U has a special emphasis on **speed**, **simplicity** and **flexibility**.
+
+**Note:** if you come from CCV8 (now called v8-juice) or are worried  
+about performace, be sure to checkout [this wiki page](https://github.com/jmendeth/v8u/wiki/Performance-and-CCV8) to  
+know which one to use.
 
 ## Enough talking, show me code!
 
 Here we have a simple module which exposes _one_ class `Hello`, with _one_ method, `world`.  
 It takes _one_ string as argument, and just returns it untouched.
 
+#### Without V8U
+
 ```C++
 class Hello : public ObjectWrap {
 public:
   //The constructor
   static Handle<Value> NewInstance(const Arguments& args) {
+    HandleScope scope;
     if (!args.IsConstructCall())
       return ThrowException(Exception::Error(String::New("Not called as constructor!")));
     Hello* instance = new Hello;
@@ -26,6 +34,7 @@ public:
 
   //The world() method
   static Handle<Value> World(const Arguments& args) {
+    HandleScope scope;
     if (args.Length() < 1)
       return ThrowException(Exception::RangeError(String::New("Not enough arguments!")));
     if (!args[0]->IsString())
@@ -36,6 +45,7 @@ public:
 
 extern "C" {
   static void initHello(Handle<Object> target) {
+    HandleScope scope;
     Local<FunctionTemplate> protL = FunctionTemplate::New(Hello::NewInstance);
     Persistent<FunctionTemplate> prot = Persistent<FunctionTemplate>::New(protL);
     prot->InstanceTemplate()->SetInternalFieldCount(1);
@@ -47,7 +57,7 @@ extern "C" {
 };
 ```
 
-With V8U, things start to look better:
+#### With V8U
 
 ```C++
 class Hello : public ObjectWrap {
@@ -78,7 +88,7 @@ things for you!
 
 ## How to use
 
-To use V8U, simply copy the HPP file into your project.  
+To use V8U, simply copy `v8u.hpp` into your project.  
 Then include it:
 
 ```C++
@@ -86,8 +96,6 @@ Then include it:
 using namespace v8u;
 ```
 
-Now, let the fun begin!
-
-TODO: explain syntax and macros  
-For now, you can [look at Robotskirt](https://github.com/benmills/robotskirt/blob/unstable/src/robotskirt.cc) to see
-a usage example.
+The last line is optional, see [the discussion](https://github.com/jmendeth/v8u/wiki/to-use-or-not-to-use).  
+Now, **let the fun begin!**  
+See the [tutorial](https://github.com/jmendeth/v8u/wiki/tutorial) to get started.
