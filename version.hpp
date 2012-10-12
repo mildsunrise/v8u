@@ -36,7 +36,6 @@ namespace v8u {
 
 class Version: public node::ObjectWrap {
 public:
-  V8_CL_WRAPPER("v8u::Version")
   Version(int major, int minor, int revision): major_(major), minor_(minor),
                                                revision_(revision) {}
   Version(Version& other): major_(other.major_), minor_(other.minor_),
@@ -95,16 +94,14 @@ public:
     inst->revision_ = Int(value);
   } V8_SETTER_END()
 
-  NODE_DEF_TYPE("Version") {
+  NODE_TYPE("v8u::Version", "Version") {
     V8_DEF_PROP(Major, "major");
     V8_DEF_PROP(Minor, "minor");
     V8_DEF_PROP(Revision, "revision");
 
     V8_DEF_METHOD(ToString, "toString");
     V8_DEF_METHOD(Inspect, "inspect");
-
-    StoreTemplate("v8u::Version", prot);
-  } NODE_DEF_TYPE_END()
+  } NODE_TYPE_END()
 private:
   int major_, minor_, revision_;
 };
