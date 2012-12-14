@@ -39,24 +39,24 @@ namespace v8u {
 
 // V8 exception wrapping
 
-#define V8_THROW(VALUE) throw v8::Persistent<v8::Value>::New(VALUE);
+#define V8_THROW(VALUE) throw v8::Persistent<v8::Value>::New(VALUE)
+#define V8_RET(VALUE) return scope.Close(VALUE)
 
 #define V8_WRAP_START()                                                        \
   v8::HandleScope scope;                                                       \
   try {
 
 #define V8_WRAP_END()                                                          \
-    return scope.Close(v8::Undefined());                                       \
   } catch (v8::Persistent<v8::Value>& err) {                                   \
     v8::Local<v8::Value> loc = v8::Local<v8::Value>::New(err);                 \
     err.Dispose();                                                             \
     return ThrowException(loc);                                                \
+  } catch (std::exception& err) {                                              \
+    return ThrowException(v8::Exception::Error(v8::String::New(err.what())));  \
   } catch (v8::Handle<v8::Value>& err) {                                       \
     return ThrowException(err);                                                \
   } catch (v8::Value*& err) {                                                  \
     return ThrowException(v8::Handle<v8::Value>(err));                         \
-  } catch (std::exception& err) {                                              \
-    return ThrowException(v8::Exception::Error(v8::String::New(err.what())));  \
   } catch (std::string& err) {                                                 \
     return ThrowException(v8::Exception::Error(v8::String::New(err.data(), err.length())));\
   } catch (...) {                                                              \
@@ -68,12 +68,12 @@ namespace v8u {
     v8::Local<v8::Value> loc = v8::Local<v8::Value>::New(err);                 \
     err.Dispose();                                                             \
     ThrowException(loc);                                                       \
+  } catch (std::exception& err) {                                              \
+    ThrowException(v8::Exception::Error(v8::String::New(err.what())));         \
   } catch (v8::Handle<v8::Value>& err) {                                       \
     ThrowException(err);                                                       \
   } catch (v8::Value*& err) {                                                  \
     ThrowException(v8::Handle<v8::Value>(err));                                \
-  } catch (std::exception& err) {                                              \
-    ThrowException(v8::Exception::Error(v8::String::New(err.what())));         \
   } catch (std::string& err) {                                                 \
     ThrowException(v8::Exception::Error(v8::String::New(err.data(), err.length())));\
   } catch (...) {                                                              \
@@ -89,70 +89,65 @@ inline void CheckArguments(int min, const v8::Arguments& args) {
 
 // V8 callback templates
 
-#define V8_S_CALLBACK(IDENTIFIER)                                              \
+#define V8_SCB(IDENTIFIER)                                                     \
   v8::Handle<v8::Value> IDENTIFIER(const v8::Arguments& args)
 
-#define V8_CALLBACK(IDENTIFIER)                                                \
-V8_S_CALLBACK(IDENTIFIER) {                                                    \
+#define V8_CB(IDENTIFIER)                                                      \
+V8_SCB(IDENTIFIER) {                                                           \
   V8_WRAP_START()
 
-#define V8_CALLBACK_END() V8_WRAP_END() }
+#define V8_CB_END() V8_WRAP_END() }
 
-#define V8_S_GETTER(IDENTIFIER)                                                \
-  v8::Handle<v8::Value> IDENTIFIER(v8::Local<v8::String> name,                 \
+#define V8_SGET(IDENTIFIER)                                                    \
+  static v8::Handle<v8::Value> IDENTIFIER(v8::Local<v8::String> name,          \
                                    const v8::AccessorInfo& info)
 
-#define V8_GETTER(IDENTIFIER)                                                  \
-V8_S_GETTER(IDENTIFIER) {                                                      \
+#define V8_GET(IDENTIFIER)                                                     \
+V8_SGET(IDENTIFIER) {                                                          \
   V8_WRAP_START()
 
-#define V8_GETTER_END() V8_WRAP_END() }
+#define V8_GET_END() V8_WRAP_END() }
 
-#define V8_S_SETTER(IDENTIFIER)                                                \
-  void IDENTIFIER(v8::Local<v8::String> name, v8::Local<v8::Value> value,      \
+#define V8_SSET(IDENTIFIER)                                                    \
+  static void IDENTIFIER(v8::Local<v8::String> name, v8::Local<v8::Value> value,\
                   const v8::AccessorInfo& info)
 
-#define V8_SETTER(IDENTIFIER)                                                  \
-V8_S_SETTER(IDENTIFIER) {                                                      \
+#define V8_SET(IDENTIFIER)                                                     \
+V8_SSET(IDENTIFIER) {                                                          \
   V8_WRAP_START()
 
-#define V8_SETTER_END() V8_WRAP_END_NR() }
+#define V8_SET_END() V8_WRAP_END_NR() }
 
-#define V8_UNWRAP(CPP_TYPE, OBJ)                                               \
-  CPP_TYPE* inst = node::ObjectWrap::Unwrap<CPP_TYPE>(OBJ.Holder());
 
 // Class-specific templates
 
-#define V8_CL_CTOR(CPP_TYPE)                                                   \
-static V8_S_CALLBACK(NewInstance) {                                            \
-  if ((args.Length()==1) && (args[0]->IsExternal())) {                         \
-    ((CPP_TYPE*)v8::External::Unwrap(args[0]))->Wrap(args.This());             \
+#define V8_SCTOR() static V8_SCB(NewInstance)
+
+#define V8_CTOR(CPP_TYPE)                                                      \
+V8_SCTOR() {                                                                   \
+  v8::Local<v8::Object> hdl = args.This();                                     \
+  if (args[0]->IsExternal()) {                                                 \
+    V8_WRAP((CPP_TYPE*)v8::External::Unwrap(args[0]));                         \
     return args.This();                                                        \
   }                                                                            \
   if (!args.IsConstructCall())                                                 \
     return v8::ThrowException(v8u::ReferenceErr("You must call this as a constructor"));\
-  V8_WRAP_START()                                                              \
-  CPP_TYPE* inst;
+  V8_WRAP_START()
 
-#define V8_CL_CTOR_END()                                                       \
-  inst->Wrap(args.This());                                                     \
-  return scope.Close(args.This());                                             \
-V8_CALLBACK_END()
+#define V8_CTOR_END()                                                          \
+  return hdl;                                                                  \
+V8_CB_END()
 
-#define V8_CL_GETTER(CPP_TYPE, CPP_VAR)                                        \
-  static V8_GETTER(Getter__##CPP_VAR)                                          \
-    V8_UNWRAP(CPP_TYPE, info)
+//// For use with V8_CTOR only!
+#define V8_WRAP(INSTANCE) (INSTANCE)->Wrap(hdl)
 
-#define V8_CL_SETTER(CPP_TYPE, CPP_VAR)                                        \
-  static V8_SETTER(Setter__##CPP_VAR)                                          \
-    V8_UNWRAP(CPP_TYPE, info)
+#define V8_M_UNWRAP(CPP_TYPE, OBJ)                                             \
+  if (CPP_TYPE::_templ->HasInstance(obj))                                      \
+    return v8::ThrowException(v8::Exception::TypeError(v8::String::New("Invalid object unwrapped.")));\
+  CPP_TYPE* inst = node::ObjectWrap::Unwrap<CPP_TYPE>(obj);                    \
 
-#define V8_CL_CALLBACK(CPP_TYPE, IDENTIFIER)                                   \
-  static V8_CALLBACK(IDENTIFIER)                                               \
-    V8_UNWRAP(CPP_TYPE, args)
-
-#define V8_TYPE(CLASSNAME)                                                     \
-  static std::string __classname(){return CLASSNAME;}                          \
+#define V8_TYPE(CPP_TYPE)                                                      \
+  static v8::FunctionTemplate* _templ;                                         \
   /**
    * Returns the unique V8 v8::Object corresponding to this C++ instance.
    * For this to work, you should use V8_CL_CTOR.
@@ -165,14 +160,20 @@ V8_CALLBACK_END()
                                                                                \
     if (handle_.IsEmpty()) {                                                   \
       v8::Handle<v8::Value> args [1] = {v8::External::New(this)};              \
-      v8u::GetTemplate(__classname())->GetFunction()->NewInstance(1,args);     \
+      _templ->GetFunction()->NewInstance(1,args);                              \
     }                                                                          \
     return scope.Close(handle_);                                               \
   }                                                                            \
   static bool HasInstance(v8::Handle<v8::Object> obj) {                        \
     v8::HandleScope scope;                                                     \
-    return v8u::GetTemplate(__classname())->HasInstance(obj);                  \
+    return _templ->HasInstance(obj);                                           \
+  }                                                                            \
+  inline static CPP_TYPE* Unwrap(v8::Handle<v8::Object> obj) {                 \
+    if (_templ->HasInstance(obj)) return node::ObjectWrap::Unwrap<CPP_TYPE>(obj);\
+    V8_THROW(v8::Exception::TypeError(v8::String::New("Invalid object unwrapped.")));\
   }
+
+#define V8_POST_TYPE(CPP_TYPE) v8::FunctionTemplate* CPP_TYPE::_templ = NULL;
 
 // Dealing with V8 persistent handles
 
@@ -234,16 +235,16 @@ inline v8::Local<v8::Integer> Uint(uint32_t integer) {
   return v8::Integer::NewFromUnsigned(integer);
 }
 
-inline v8::Local<v8::String> Str(const char* data) {
-  return v8::String::New(data);
+inline v8::Local<v8::String> Str(const char* data, int length = -1) {
+  return v8::String::New(data, length);
 }
 
 inline v8::Local<v8::String> Str(std::string str) {
   return v8::String::New(str.data(), str.length());
 }
 
-inline v8::Local<v8::String> Symbol(const char* data) {
-  return v8::String::NewSymbol(data);
+inline v8::Local<v8::String> Symbol(const char* data, int length = -1) {
+  return v8::String::NewSymbol(data, length);
 }
 
 inline v8::Local<v8::Object> Obj() {
@@ -297,23 +298,33 @@ inline bool Bool(v8::Handle<v8::Value> hdl) {
 
 // Defining things
 
+#define V8_DEF_TYPE_PRE()                                                      \
+  v8::Persistent<v8::FunctionTemplate> templ;                                  \
+  v8::Local<v8::ObjectTemplate> prot;                                          \
+  v8::Local<v8::ObjectTemplate> inst;                                          \
+  v8::Handle<v8::String> __cname;
+
 #define V8_DEF_TYPE(V8_NAME)                                                   \
-  v8::Persistent<v8::FunctionTemplate> prot = v8::Persistent<v8::FunctionTemplate>::New(\
+  templ = v8::Persistent<v8::FunctionTemplate>::New(                           \
       v8::FunctionTemplate::New(NewInstance));                                 \
-  v8::Handle<v8::String> __cname = v8::String::NewSymbol(V8_NAME);             \
-  prot->SetClassName(__cname);                                                 \
-  prot->InstanceTemplate()->SetInternalFieldCount(1);
+  __cname = v8::String::NewSymbol(V8_NAME);                                    \
+  templ->SetClassName(__cname);                                                \
+  inst = templ->InstanceTemplate();                                            \
+  inst->SetInternalFieldCount(1);                                              \
+  prot = templ->PrototypeTemplate();
 
-#define V8_DEF_PROP(CPP_VAR, V8_NAME)                                          \
-  prot->InstanceTemplate()->SetAccessor(NODE_PSYMBOL(V8_NAME), Getter__##CPP_VAR, Setter__##CPP_VAR);
+#define V8_DEF_ACC(V8_NAME, GETTER, SETTER)                                    \
+  inst->SetAccessor(v8::String::NewSymbol(V8_NAME), GETTER, SETTER)
 
-#define V8_DEF_RPROP(CPP_VAR, V8_NAME)                                         \
-  prot->InstanceTemplate()->SetAccessor(NODE_PSYMBOL(V8_NAME), Getter__##CPP_VAR);
+#define V8_DEF_GET(V8_NAME, GETTER)                                            \
+  inst->SetAccessor(v8::String::NewSymbol(V8_NAME), GETTER)
 
-#define V8_DEF_METHOD(CPP_METHOD, V8_NAME)                                     \
-  NODE_SET_PROTOTYPE_METHOD(prot, V8_NAME, CPP_METHOD);
+//FIXME: add V8_DEF_SET
 
-#define V8_INHERIT(CLASSNAME) prot->Inherit(v8u::GetTemplate(CLASSNAME));
+#define V8_DEF_CB(V8_NAME, CPP_METHOD)                                         \
+  inst->Set(v8::String::NewSymbol(V8_NAME), v8::FunctionTemplate::New(CPP_METHOD)->GetFunction())
+
+#define V8_INHERIT(CPP_TYPE) templ->Inherit(CPP_TYPE::_templ)
 
 // Templates for definition methods on Node
 
@@ -337,59 +348,30 @@ inline bool Bool(v8::Handle<v8::Value> hdl) {
 #define NODE_DEF_TYPE(V8_NAME)                                                 \
   inline static NODE_DEF(init) {                                               \
     v8::HandleScope scope;                                                     \
+    V8_DEF_TYPE_PRE()                                                          \
     V8_DEF_TYPE(V8_NAME)
 
 #define NODE_DEF_TYPE_END()                                                    \
-    target->Set(__cname, prot->GetFunction());                                 \
+    target->Set(__cname, templ->GetFunction());                                \
   }
 
 //// V8_TYPE + NODE_DEF_TYPE = NODE_TYPE
 
-#define NODE_TYPE(CLASSNAME, V8_NAME)                                          \
-  V8_TYPE(CLASSNAME)                                                           \
-  NODE_DEF_TYPE(V8_NAME)
+#define NODE_TYPE(CPP_TYPE, V8_NAME)                                           \
+  V8_TYPE(CPP_TYPE)                                                            \
+  inline static NODE_DEF(init) {                                               \
+    if (_templ) {                                                              \
+      target->Set(v8::String::NewSymbol(V8_NAME), v8::Handle<v8::Function>(_templ->GetFunction()));\
+      return;                                                                  \
+    }                                                                          \
+    v8::HandleScope scope;                                                     \
+    V8_DEF_TYPE_PRE()                                                          \
+    V8_DEF_TYPE(V8_NAME)
 
 #define NODE_TYPE_END()                                                        \
-    v8u::StoreTemplate(__classname(), prot);                                   \
+    _templ = *templ;                                                           \
   NODE_DEF_TYPE_END()
-
-// Storing templates for later use
-
-class map_comparison {
-public:
-  bool operator()(const std::pair<v8::Handle<v8::Context>, std::string> a, const std::pair<v8::Handle<v8::Context>, std::string> b) {
-  //Compare strings
-    int cp = a.second.compare(b.second);
-    if (cp) return cp < 0;
-
-    //Compare contexts
-    if (*a.first == NULL) return *b.first;
-    if (*b.first == NULL) return false;
-    return *((v8::internal::Object**)*a.first) < *((v8::internal::Object**)*b.first);
-  }
-};
-
-//FIXME LOW PRIORITY: initialize at functions
-std::map< std::pair<v8::Handle<v8::Context>, std::string>, v8::Persistent<v8::FunctionTemplate>,
-    map_comparison> v8_wrapped_prototypes;
-
-void StoreTemplate(std::string classname, v8::Persistent<v8::FunctionTemplate> templ) {
-  v8::HandleScope scope;
-  //FIXME, LOW PRIORITY: make a weak ref, ensure removal when context deallocates
-  std::pair<v8::Handle<v8::Context>, std::string> key (v8::Persistent<v8::Context>::New(v8::Context::GetCurrent()), classname);
-  v8_wrapped_prototypes.insert(
-      std::pair< std::pair<v8::Handle<v8::Context>, std::string>,
-                 v8::Persistent<v8::FunctionTemplate> > (key, templ)
-  );
-}
-
-v8::Persistent<v8::FunctionTemplate> GetTemplate(std::string classname) {
-  v8::HandleScope scope;
-  std::pair<v8::Handle<v8::Context>, std::string> key (v8::Context::GetCurrent(), classname);
-  return v8_wrapped_prototypes.at(key);
-}
 
 };
 
 #endif	/* V8U_HPP */
-
