@@ -35,8 +35,6 @@ public:
   //The world() method
   static Handle<Value> World(const Arguments& args) {
     HandleScope scope;
-    if (args.Length() < 1)
-      return ThrowException(Exception::RangeError(String::New("Not enough arguments!")));
     if (!args[0]->IsString())
       return ThrowException(Exception::TypeError(String::New("Arg must be a string!")));
     return scope.Close(args[0]);
@@ -62,23 +60,24 @@ extern "C" {
 ```C++
 class Hello : public ObjectWrap {
 public:
-  V8_CL_CTOR(Hello) {
-    inst = new Hello;
-  } V8_CL_CTOR_END()
+  //The constructor
+  V8_CTOR(Hello) {
+    V8_WRAP(new Hello);
+  } V8_CTOR_END()
 
-  V8_CL_CALLBACK(Hello, World) {
-    CheckArguments(1, args);
+  //The world() method
+  static V8_CB(World) {
     if (!args[0]->IsString()) V8_THROW(TypeErr("Arg must be a string!"));
-    return scope.Close(args[0]);
-  } V8_CALLBACK_END()
+    V8_RET(args[0]);
+  } V8_CB_END()
   
   NODE_DEF_TYPE("Hello") {
-    NODE_DEF_METHOD(World, "world");
+    NODE_DEF_CB("world", World);
   } NODE_DEF_TYPE_END()
 };
 
 NODE_DEF_MAIN() {
-  initHello(target);
+  Hello::init(target);
 } NODE_DEF_MAIN_END(simpleaddon)
 ```
 
@@ -93,9 +92,11 @@ Then include it:
 
 ```C++
 #include "v8u.hpp"
+using namespace v8;
 using namespace v8u;
+using namespace node;
 ```
 
-The last line is optional, see [the discussion](https://github.com/jmendeth/v8u/wiki/to-use-or-not-to-use).  
+The `using` lines are optional, see [the discussion](https://github.com/jmendeth/v8u/wiki/to-use-or-not-to-use).  
 Now, **let the fun begin!**  
 See the [tutorial](https://github.com/jmendeth/v8u/wiki/tutorial) to get started.

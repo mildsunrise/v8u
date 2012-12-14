@@ -41,14 +41,13 @@ public:
   Version(Version& other): major_(other.major_), minor_(other.minor_),
                            revision_(other.revision_) {}
   ~Version() {}
-  V8_CL_CTOR(Version) {
-    CheckArguments(3, args);
+  V8_CTOR(Version) {
     int arg0 = Int(args[0]);
     int arg1 = Int(args[1]);
     int arg2 = Int(args[2]);
 
-    inst = new Version(arg0, arg1, arg2);
-  } V8_CL_CTOR_END()
+    V8_WRAP(new Version(arg0, arg1, arg2));
+  } V8_CTOR_END()
 
   int getMajor() const {return major_;}
   int getMinor() const {return minor_;}
@@ -64,47 +63,58 @@ public:
     return ret.str();
   }
 
-  V8_CL_CALLBACK(Version, ToString) {
-    return scope.Close(Str(inst->toString()));
-  } V8_CALLBACK_END()
+  static V8_CB(ToString) {
+    Version* inst = Unwrap(args.This());
+    std::string ret = inst->toString();
+    V8_RET(Str(ret.data(), ret.size()));
+  } V8_CB_END()
 
-  V8_CL_CALLBACK(Version, Inspect) {
-    return scope.Close(Str("<Version "+inst->toString()+">"));
-  } V8_CALLBACK_END()
+  static V8_CB(Inspect) {
+    Version* inst = Unwrap(args.This());
+    std::string ret = "<Version "+inst->toString()+">";
+    V8_RET(Str(ret.data(), ret.size()));
+  } V8_CB_END()
 
   //Getters
-  V8_CL_GETTER(Version, Major) {
-    return scope.Close(Int(inst->major_));
-  } V8_GETTER_END()
-  V8_CL_GETTER(Version, Minor) {
-    return scope.Close(Int(inst->minor_));
-  } V8_GETTER_END()
-  V8_CL_GETTER(Version, Revision) {
-    return scope.Close(Int(inst->revision_));
-  } V8_GETTER_END()
+  V8_GET(GetMajor) {
+    Version* inst = Unwrap(info.Holder());
+    V8_RET(Int(inst->major_));
+  } V8_GET_END()
+  V8_GET(GetMinor) {
+    Version* inst = Unwrap(info.Holder());
+    V8_RET(Int(inst->minor_));
+  } V8_GET_END()
+  V8_GET(GetRevision) {
+    Version* inst = Unwrap(info.Holder());
+    V8_RET(Int(inst->revision_));
+  } V8_GET_END()
 
   //Setters
-  V8_CL_SETTER(Version, Major) {
+  V8_SET(SetMajor) {
+    Version* inst = Unwrap(info.Holder());
     inst->major_ = Int(value);
-  } V8_SETTER_END()
-  V8_CL_SETTER(Version, Minor) {
+  } V8_SET_END()
+  V8_SET(SetMinor) {
+    Version* inst = Unwrap(info.Holder());
     inst->minor_ = Int(value);
-  } V8_SETTER_END()
-  V8_CL_SETTER(Version, Revision) {
+  } V8_SET_END()
+  V8_SET(SetRevision) {
+    Version* inst = Unwrap(info.Holder());
     inst->revision_ = Int(value);
-  } V8_SETTER_END()
+  } V8_SET_END()
 
-  NODE_TYPE("v8u::Version", "Version") {
-    V8_DEF_PROP(Major, "major");
-    V8_DEF_PROP(Minor, "minor");
-    V8_DEF_PROP(Revision, "revision");
+  NODE_TYPE(Version, "Version") {
+    V8_DEF_ACC("major", GetMajor, SetMajor);
+    V8_DEF_ACC("minor", GetMinor, SetMinor);
+    V8_DEF_ACC("revision", GetRevision, SetRevision);
 
-    V8_DEF_METHOD(ToString, "toString");
-    V8_DEF_METHOD(Inspect, "inspect");
+    V8_DEF_CB("toString", ToString);
+    V8_DEF_CB("inspect", Inspect);
   } NODE_TYPE_END()
 private:
   int major_, minor_, revision_;
 };
+V8_POST_TYPE(Version)
 
 };
 
