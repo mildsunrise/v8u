@@ -87,6 +87,15 @@ inline void CheckArguments(int min, const v8::Arguments& args) {
     throw v8::Persistent<v8::Value>::New(v8::Exception::RangeError(v8::String::New("Not enough arguments.")));
 }
 
+// Internal macros, don't use! -------------------------------------------------
+#define _v8_getter(ID)                                                         \
+  v8::Handle<v8::Value> ID(v8::Local<v8::String> name,                         \
+                           const v8::AccessorInfo& info)
+#define _v8_setter(ID)                                                         \
+  void ID(v8::Local<v8::String> name, v8::Local<v8::Value> value,              \
+          const v8::AccessorInfo& info)
+//------------------------------------------------------------------------------
+
 // V8 callback templates
 
 #define V8_SCB(IDENTIFIER)                                                     \
@@ -98,36 +107,58 @@ V8_SCB(IDENTIFIER) {                                                           \
 
 #define V8_CB_END() V8_WRAP_END() }
 
-#define V8_SGET(IDENTIFIER)                                                    \
-  static v8::Handle<v8::Value> IDENTIFIER(v8::Local<v8::String> name,          \
-                                   const v8::AccessorInfo& info)
+// V8 getter templates
+
+#define V8_SGET(IDENTIFIER) static _v8_getter(IDENTIFIER)
+#define V8_ESGET(TYPE, IDENTIFIER) _v8_getter(TYPE::IDENTIFIER)
 
 #define V8_GET(IDENTIFIER)                                                     \
 V8_SGET(IDENTIFIER) {                                                          \
   V8_WRAP_START()
 
+#define V8_EGET(TYPE, IDENTIFIER)                                              \
+V8_ESGET(TYPE, IDENTIFIER) {                                                   \
+  V8_WRAP_START()
+
 #define V8_GET_END() V8_WRAP_END() }
 
-#define V8_SSET(IDENTIFIER)                                                    \
-  static void IDENTIFIER(v8::Local<v8::String> name, v8::Local<v8::Value> value,\
-                  const v8::AccessorInfo& info)
+// V8 setter templates
+
+#define V8_SSET(IDENTIFIER) static _v8_setter(IDENTIFIER)
+#define V8_ESSET(TYPE, IDENTIFIER) _v8_setter(TYPE::IDENTIFIER)
 
 #define V8_SET(IDENTIFIER)                                                     \
 V8_SSET(IDENTIFIER) {                                                          \
   V8_WRAP_START()
 
+#define V8_ESET(TYPE, IDENTIFIER)                                              \
+V8_ESSET(TYPE, IDENTIFIER) {                                                   \
+  V8_WRAP_START()
+
 #define V8_SET_END() V8_WRAP_END_NR() }
 
 
-// Class-specific templates
+// Other class-specific templates
 
 #define V8_SCTOR() static V8_SCB(NewInstance)
+#define V8_ESCTOR(TYPE)   V8_SCB(TYPE::NewInstance)
 
 #define V8_CTOR(CPP_TYPE)                                                      \
 V8_SCTOR() {                                                                   \
   v8::Local<v8::Object> hdl = args.This();                                     \
   if (args[0]->IsExternal()) {                                                 \
     V8_WRAP((CPP_TYPE*)v8::External::Unwrap(args[0]));                         \
+    return args.This();                                                        \
+  }                                                                            \
+  if (!args.IsConstructCall())                                                 \
+    return v8::ThrowException(v8u::ReferenceErr("You must call this as a constructor"));\
+  V8_WRAP_START()
+
+#define V8_ECTOR(TYPE)                                                         \
+V8_ESCTOR(TYPE) {                                                              \
+  v8::Local<v8::Object> hdl = args.This();                                     \
+  if (args[0]->IsExternal()) {                                                 \
+    V8_WRAP((TYPE*)v8::External::Unwrap(args[0]));                             \
     return args.This();                                                        \
   }                                                                            \
   if (!args.IsConstructCall())                                                 \
@@ -144,7 +175,20 @@ V8_CB_END()
 #define V8_M_UNWRAP(CPP_TYPE, OBJ)                                             \
   if (CPP_TYPE::_templ->HasInstance(obj))                                      \
     return v8::ThrowException(v8::Exception::TypeError(v8::String::New("Invalid object unwrapped.")));\
-  CPP_TYPE* inst = node::ObjectWrap::Unwrap<CPP_TYPE>(obj);                    \
+  CPP_TYPE* inst = node::ObjectWrap::Unwrap<CPP_TYPE>(obj);
+
+#define V8_STYPE(CPP_TYPE)                                                     \
+  static v8::FunctionTemplate* _templ;                                         \
+  /**
+   * Returns the unique V8 v8::Object corresponding to this C++ instance.
+   * For this to work, you should use V8_CL_CTOR.
+   *
+   * CALLING Wrapped() WITHIN A CONSTRUCTOR MAY YIELD UNEXPECTED RESULTS,
+   * EVENTUALLY MAKING YOU BASH YOUR HEAD AGAINST A WALL. YOU HAVE BEEN WARNED.
+   **/                                                                         \
+  virtual v8::Local<v8::Object> Wrapped();                                     \
+  static bool HasInstance(v8::Handle<v8::Object> obj);                         \
+  inline static CPP_TYPE* Unwrap(v8::Handle<v8::Object> obj)
 
 #define V8_TYPE(CPP_TYPE)                                                      \
   static v8::FunctionTemplate* _templ;                                         \
@@ -170,6 +214,25 @@ V8_CB_END()
   }                                                                            \
   inline static CPP_TYPE* Unwrap(v8::Handle<v8::Object> obj) {                 \
     if (_templ->HasInstance(obj)) return node::ObjectWrap::Unwrap<CPP_TYPE>(obj);\
+    V8_THROW(v8::Exception::TypeError(v8::String::New("Invalid object unwrapped.")));\
+  }
+
+#define V8_ETYPE(TYPE)                                                         \
+  v8::Local<v8::Object> TYPE::Wrapped() {                                      \
+    v8::HandleScope scope;                                                     \
+                                                                               \
+    if (handle_.IsEmpty()) {                                                   \
+      v8::Handle<v8::Value> args [1] = {v8::External::New(this)};              \
+      _templ->GetFunction()->NewInstance(1,args);                              \
+    }                                                                          \
+    return scope.Close(handle_);                                               \
+  }                                                                            \
+  bool TYPE::HasInstance(v8::Handle<v8::Object> obj) {                         \
+    v8::HandleScope scope;                                                     \
+    return _templ->HasInstance(obj);                                           \
+  }                                                                            \
+  TYPE* TYPE::Unwrap(v8::Handle<v8::Object> obj) {                             \
+    if (_templ->HasInstance(obj)) return node::ObjectWrap::Unwrap<TYPE>(obj);  \
     V8_THROW(v8::Exception::TypeError(v8::String::New("Invalid object unwrapped.")));\
   }
 
@@ -345,8 +408,17 @@ inline bool Bool(v8::Handle<v8::Value> hdl) {
 
 //// Type (class) define function
 
+#define NODE_SDEF_TYPE() static NODE_DEF(init)
+#define NODE_ESDEF_TYPE(TYPE)   NODE_DEF(TYPE::init)
+
 #define NODE_DEF_TYPE(V8_NAME)                                                 \
-  inline static NODE_DEF(init) {                                               \
+  inline NODE_SDEF_TYPE() {                                                    \
+    v8::HandleScope scope;                                                     \
+    V8_DEF_TYPE_PRE()                                                          \
+    V8_DEF_TYPE(V8_NAME)
+
+#define NODE_EDEF_TYPE(TYPE, V8_NAME)                                          \
+  NODE_ESDEF_TYPE(TYPE) {                                                      \
     v8::HandleScope scope;                                                     \
     V8_DEF_TYPE_PRE()                                                          \
     V8_DEF_TYPE(V8_NAME)
@@ -357,9 +429,24 @@ inline bool Bool(v8::Handle<v8::Value> hdl) {
 
 //// V8_TYPE + NODE_DEF_TYPE = NODE_TYPE
 
+#define NODE_STYPE(CPP_TYPE)                                                   \
+  V8_STYPE(CPP_TYPE);                                                          \
+  NODE_SDEF_TYPE()
+
 #define NODE_TYPE(CPP_TYPE, V8_NAME)                                           \
   V8_TYPE(CPP_TYPE)                                                            \
-  inline static NODE_DEF(init) {                                               \
+  inline NODE_SDEF_TYPE() {                                                    \
+    if (_templ) {                                                              \
+      target->Set(v8::String::NewSymbol(V8_NAME), v8::Handle<v8::Function>(_templ->GetFunction()));\
+      return;                                                                  \
+    }                                                                          \
+    v8::HandleScope scope;                                                     \
+    V8_DEF_TYPE_PRE()                                                          \
+    V8_DEF_TYPE(V8_NAME)
+
+#define NODE_ETYPE(TYPE, V8_NAME)                                              \
+  V8_ETYPE(TYPE)                                                               \
+  NODE_ESDEF_TYPE(TYPE) {                                                      \
     if (_templ) {                                                              \
       target->Set(v8::String::NewSymbol(V8_NAME), v8::Handle<v8::Function>(_templ->GetFunction()));\
       return;                                                                  \
