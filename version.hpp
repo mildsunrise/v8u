@@ -41,7 +41,7 @@ public:
   Version(Version& other): major_(other.major_), minor_(other.minor_),
                            revision_(other.revision_) {}
   ~Version() {}
-  V8_CTOR(Version) {
+  V8_CTOR() {
     int arg0 = Int(args[0]);
     int arg1 = Int(args[1]);
     int arg2 = Int(args[2]);

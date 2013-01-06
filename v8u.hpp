@@ -94,6 +94,12 @@ inline void CheckArguments(int min, const v8::Arguments& args) {
 #define _v8_setter(ID)                                                         \
   void ID(v8::Local<v8::String> name, v8::Local<v8::Value> value,              \
           const v8::AccessorInfo& info)
+#define _v8_ctor {                                                             \
+  if (args[0]->IsExternal()) return args.This();                               \
+  if (!args.IsConstructCall())                                                 \
+    return v8::ThrowException(v8u::ReferenceErr("You must call this as a constructor"));\
+  V8_WRAP_START()                                                              \
+    v8::Local<v8::Object> hdl = args.This();
 //------------------------------------------------------------------------------
 
 // V8 callback templates
@@ -143,31 +149,23 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
 #define V8_SCTOR() static V8_SCB(NewInstance)
 #define V8_ESCTOR(TYPE)   V8_SCB(TYPE::NewInstance)
 
-#define V8_CTOR(CPP_TYPE)                                                      \
-V8_SCTOR() {                                                                   \
-  v8::Local<v8::Object> hdl = args.This();                                     \
-  if (args[0]->IsExternal()) {                                                 \
-    V8_WRAP((CPP_TYPE*)v8::External::Unwrap(args[0]));                         \
-    return args.This();                                                        \
-  }                                                                            \
-  if (!args.IsConstructCall())                                                 \
-    return v8::ThrowException(v8u::ReferenceErr("You must call this as a constructor"));\
-  V8_WRAP_START()
-
-#define V8_ECTOR(TYPE)                                                         \
-V8_ESCTOR(TYPE) {                                                              \
-  v8::Local<v8::Object> hdl = args.This();                                     \
-  if (args[0]->IsExternal()) {                                                 \
-    V8_WRAP((TYPE*)v8::External::Unwrap(args[0]));                             \
-    return args.This();                                                        \
-  }                                                                            \
-  if (!args.IsConstructCall())                                                 \
-    return v8::ThrowException(v8u::ReferenceErr("You must call this as a constructor"));\
-  V8_WRAP_START()
+#define V8_CTOR()      V8_SCTOR() _v8_ctor
+#define V8_ECTOR(TYPE) V8_ESCTOR(TYPE) _v8_ctor
 
 #define V8_CTOR_END()                                                          \
   return hdl;                                                                  \
 V8_CB_END()
+
+// Special constructors: use within V8_[E]SCTOR() ------------------------------
+#define V8_CTOR_NO_ALL return v8::ThrowException(v8::Exception::TypeError(     \
+  v8::String::New("No instances of this exact type may be constructed.")       \
+));
+#define V8_CTOR_NO_JS                                                          \
+  if (args[0]->IsExternal()) return args.This();                               \
+  return v8::ThrowException(v8::Exception::TypeError(                          \
+    v8::String::New("You can't construct instances of this type directly.")    \
+  ));
+//------------------------------------------------------------------------------
 
 //// For use with V8_CTOR only!
 #define V8_WRAP(INSTANCE) (INSTANCE)->Wrap(hdl)
@@ -194,7 +192,8 @@ V8_CB_END()
   static v8::FunctionTemplate* _templ;                                         \
   /**
    * Returns the unique V8 v8::Object corresponding to this C++ instance.
-   * For this to work, you should use V8_CL_CTOR.
+   * For this to work, you should use V8_[E]CTOR.
+   * V8_[E]SCTOR with V8_CTOR_NO_JS will work as well.
    *
    * CALLING Wrapped() WITHIN A CONSTRUCTOR MAY YIELD UNEXPECTED RESULTS,
    * EVENTUALLY MAKING YOU BASH YOUR HEAD AGAINST A WALL. YOU HAVE BEEN WARNED.
@@ -204,7 +203,7 @@ V8_CB_END()
                                                                                \
     if (handle_.IsEmpty()) {                                                   \
       v8::Handle<v8::Value> args [1] = {v8::External::New(this)};              \
-      _templ->GetFunction()->NewInstance(1,args);                              \
+      Wrap(_templ->GetFunction()->NewInstance(1,args));                        \
     }                                                                          \
     return scope.Close(handle_);                                               \
   }                                                                            \
@@ -223,7 +222,7 @@ V8_CB_END()
                                                                                \
     if (handle_.IsEmpty()) {                                                   \
       v8::Handle<v8::Value> args [1] = {v8::External::New(this)};              \
-      _templ->GetFunction()->NewInstance(1,args);                              \
+      Wrap(_templ->GetFunction()->NewInstance(1,args));                        \
     }                                                                          \
     return scope.Close(handle_);                                               \
   }                                                                            \
@@ -351,8 +350,14 @@ inline uint32_t Uint(v8::Handle<v8::Value> hdl) {
   return hdl->Uint32Value();
 }
 
+inline v8::Handle<v8::Object> Obj(v8::Handle<v8::Value> hdl) {
+  return v8::Handle<v8::Object>::Cast(hdl);
+}
 inline v8::Local<v8::Object> Obj(v8::Local<v8::Value> hdl) {
   return v8::Local<v8::Object>::Cast(hdl);
+}
+inline v8::Persistent<v8::Object> Obj(v8::Persistent<v8::Value> hdl) {
+  return v8::Persistent<v8::Object>::Cast(hdl);
 }
 
 inline bool Bool(v8::Handle<v8::Value> hdl) {
