@@ -8,6 +8,9 @@ Sure, the V8 syntax is very **verbose** and repetitive.
 With V8U, that will change.  
 V8U has a special emphasis on **speed**, **simplicity** and **flexibility**.
 
+V8U is quite **fast**, and will make your modules **safer**
+without you notice.
+
 **Note:** if you come from CCV8 (now called v8-juice) or are worried  
 about performace, be sure to checkout [this wiki page](https://github.com/jmendeth/v8u/wiki/Performance-and-CCV8) to  
 know which one to use.
@@ -20,36 +23,36 @@ It takes _one_ string as argument, and just returns it untouched.
 #### Without V8U
 
 ```C++
-class Hello : public ObjectWrap {
+class Hello : public node::ObjectWrap {
 public:
   //The constructor
-  static Handle<Value> NewInstance(const Arguments& args) {
-    HandleScope scope;
+  static Handle<Value> NewInstance(const v8::Arguments& args) {
+    v8::HandleScope scope;
     if (!args.IsConstructCall())
-      return ThrowException(Exception::Error(String::New("Not called as constructor!")));
+      return v8::ThrowException(v8::Exception::Error(v8::String::New("Not called as constructor!")));
     Hello* instance = new Hello;
     instance->Wrap(args.This());
     return args.This();
   }
 
   //The world() method
-  static Handle<Value> World(const Arguments& args) {
-    HandleScope scope;
+  static Handle<Value> World(const v8::Arguments& args) {
+    v8::HandleScope scope;
     if (!args[0]->IsString())
-      return ThrowException(Exception::TypeError(String::New("Arg must be a string!")));
+      return v8::ThrowException(v8::Exception::TypeError(v8::String::New("Arg must be a string!")));
     return scope.Close(args[0]);
   }
 };
 
 extern "C" {
   static void initHello(Handle<Object> target) {
-    HandleScope scope;
-    Local<FunctionTemplate> protL = FunctionTemplate::New(Hello::NewInstance);
-    Persistent<FunctionTemplate> prot = Persistent<FunctionTemplate>::New(protL);
+    v8::HandleScope scope;
+    v8::Local<v8::FunctionTemplate> protL = v8::FunctionTemplate::New(Hello::NewInstance);
+    v8::Persistent<v8::FunctionTemplate> prot = v8::Persistent<v8::FunctionTemplate>::New(protL);
     prot->InstanceTemplate()->SetInternalFieldCount(1);
-    prot->SetClassName(String::NewSymbol("Hello"));
+    prot->SetClassName(v8::String::NewSymbol("Hello"));
     NODE_SET_PROTOTYPE_METHOD(prot, "world", Hello::World);
-    target->Set(String::NewSymbol("Hello"), prot->GetFunction();
+    target->Set(v8::String::NewSymbol("Hello"), prot->GetFunction());
   }
   NODE_MODULE(simpleaddon, initHello);
 };
@@ -61,18 +64,18 @@ extern "C" {
 class Hello : public ObjectWrap {
 public:
   //The constructor
-  V8_CTOR(Hello) {
+  V8_CTOR() {
     V8_WRAP(new Hello);
   } V8_CTOR_END()
 
   //The world() method
   static V8_CB(World) {
-    if (!args[0]->IsString()) V8_THROW(TypeErr("Arg must be a string!"));
+    if (!args[0]->IsString()) V8_THROW(v8u::TypeErr("Arg must be a string!"));
     V8_RET(args[0]);
   } V8_CB_END()
   
   NODE_DEF_TYPE("Hello") {
-    NODE_DEF_CB("world", World);
+    V8_DEF_CB("world", World);
   } NODE_DEF_TYPE_END()
 };
 
@@ -92,11 +95,7 @@ Then include it:
 
 ```C++
 #include "v8u.hpp"
-using namespace v8;
-using namespace v8u;
-using namespace node;
 ```
 
-The `using` lines are optional, see [the discussion](https://github.com/jmendeth/v8u/wiki/to-use-or-not-to-use).  
 Now, **let the fun begin!**  
 See the [tutorial](https://github.com/jmendeth/v8u/wiki/tutorial) to get started.
