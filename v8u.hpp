@@ -171,9 +171,9 @@ V8_CB_END()
 #define V8_WRAP(INSTANCE) (INSTANCE)->Wrap(hdl)
 
 #define V8_M_UNWRAP(CPP_TYPE, OBJ)                                             \
-  if (CPP_TYPE::_templ->HasInstance(obj))                                      \
+  if (!CPP_TYPE::_templ->HasInstance(OBJ))                                     \
     return v8::ThrowException(v8::Exception::TypeError(v8::String::New("Invalid object unwrapped.")));\
-  CPP_TYPE* inst = node::ObjectWrap::Unwrap<CPP_TYPE>(obj);
+  CPP_TYPE* inst = node::ObjectWrap::Unwrap<CPP_TYPE>(OBJ);
 
 #define V8_STYPE(CPP_TYPE)                                                     \
   static v8::FunctionTemplate* _templ;                                         \
