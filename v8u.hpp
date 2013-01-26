@@ -313,6 +313,10 @@ inline v8::Local<v8::Object> Obj() {
   return v8::Object::New();
 }
 
+inline v8::Local<v8::Array> Arr(int length = 0) {
+  return v8::Array::New(length);
+}
+
 #define __V8_ERROR_CTOR(ERROR)                                                 \
 inline v8::Local<v8::Value> ERROR##Err(const char* msg) {                      \
   return v8::Exception::ERROR##Error(v8::String::New(msg));                    \
@@ -358,6 +362,26 @@ inline v8::Local<v8::Object> Obj(v8::Local<v8::Value> hdl) {
 }
 inline v8::Persistent<v8::Object> Obj(v8::Persistent<v8::Value> hdl) {
   return v8::Persistent<v8::Object>::Cast(hdl);
+}
+
+inline v8::Handle<v8::Array> Arr(v8::Handle<v8::Value> hdl) {
+  return v8::Handle<v8::Array>::Cast(hdl);
+}
+inline v8::Local<v8::Array> Arr(v8::Local<v8::Value> hdl) {
+  return v8::Local<v8::Array>::Cast(hdl);
+}
+inline v8::Persistent<v8::Array> Arr(v8::Persistent<v8::Value> hdl) {
+  return v8::Persistent<v8::Array>::Cast(hdl);
+}
+
+template <class T> inline v8::Handle<T> Cast(v8::Handle<v8::Value> hdl) {
+  return v8::Handle<T>::Cast(hdl);
+}
+template <class T> inline v8::Local<T> Cast(v8::Local<v8::Value> hdl) {
+  return v8::Local<T>::Cast(hdl);
+}
+template <class T> inline v8::Persistent<T> Cast(v8::Persistent<v8::Value> hdl) {
+  return v8::Persistent<T>::Cast(hdl);
 }
 
 inline bool Bool(v8::Handle<v8::Value> hdl) {
