@@ -18,7 +18,16 @@ know which one to use.
 ## Enough talking, show me code!
 
 Here we have a simple module which exposes _one_ class `Hello`, with _one_ method, `world`.  
-It takes _one_ string as argument, and just returns it untouched.
+It takes _one_ string as argument, and just returns it untouched:
+
+```javascript
+> Hello = require('./simpleaddon').Hello;
+[Function: Hello]
+> hello = new Hello();
+{ world: [Function] }
+> hello.world('the cat!')
+'the cat!'
+```
 
 #### Without V8U
 
