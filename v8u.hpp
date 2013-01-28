@@ -40,6 +40,7 @@ namespace v8u {
 // V8 exception wrapping
 
 #define V8_THROW(VALUE) throw v8::Persistent<v8::Value>::New(VALUE)
+#define V8_STHROW(VALUE) return v8::ThrowException(VALUE)
 #define V8_RET(VALUE) return scope.Close(VALUE)
 
 #define V8_WRAP_START()                                                        \
@@ -251,8 +252,8 @@ template <class T> inline void SetPersistent(v8::Persistent<T>& handle, v8::Hand
   handle = v8::Persistent<T>::New(value);
 }
 
-inline v8::Persistent<v8::Value> Persist(v8::Handle<v8::Value> handle) {
-  return v8::Persistent<v8::Value>::New(handle);
+template <class T> inline v8::Persistent<T> Persist(v8::Handle<T> handle) {
+  return v8::Persistent<T>::New(handle);
 }
 
 template <class T> class Persisted {
