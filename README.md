@@ -134,3 +134,10 @@ NODE_DEF_MAIN() {
 } NODE_DEF_MAIN_END(mymodule)
 ```
 
+Results in:
+
+```js
+> require("mymodule")
+{ Version: [Function Version],
+  version: <Version 2.9.1> }
+```
