@@ -128,7 +128,7 @@ NODE_DEF_MAIN() {
   v8u::Version::init(target);
   // Put my version
   target->Set(
-    v8u::Symbol("version"),
+    v8u::Symbol("myversion"),
     new v8u::Version(2,9,1)->Wrapped()
   );
 } NODE_DEF_MAIN_END(mymodule)
@@ -136,8 +136,10 @@ NODE_DEF_MAIN() {
 
 Results in:
 
-```js
+```javascript
 > require("mymodule")
-{ Version: [Function Version],
-  version: <Version 2.9.1> }
+{ Version: [Function: Version],
+  myversion: <Version 2.9.1> }
 ```
+
+See it [in action](https://github.com/benmills/robotskirt#version-stuff)!
