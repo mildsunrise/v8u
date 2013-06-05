@@ -108,3 +108,29 @@ Then include it:
 
 Now, **let the fun begin!**  
 See the [tutorial](https://github.com/jmendeth/v8u/wiki/tutorial) to get started.
+
+### The Version class
+
+Also included is the `version.hpp` file, which exposes the `Version` type.
+It's a very simple class which stores three integers: the **major**, **minor**,
+and **patch** (also called revision) versions.
+
+It can represent any semantic version (Node's version, your package's NPM version, ...)
+and you can easily initialize it from the C++ side.
+
+To use it, copy your `version.hpp` along with `v8u.hpp` and do things like:
+
+```c++
+#include "version.hpp"
+
+NODE_DEF_MAIN() {
+  // Initialize Version class
+  v8u::Version::init(target);
+  // Put my version
+  target->Set(
+    v8u::Symbol("version"),
+    new v8u::Version(2,9,1)->Wrapped()
+  );
+} NODE_DEF_MAIN_END(mymodule)
+```
+
