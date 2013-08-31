@@ -337,7 +337,11 @@ inline v8::Handle<v8::Boolean> Bool(bool boolean) {
   return v8::Boolean::New(boolean);
 }
 
-inline v8::Local<v8::FunctionTemplate> Func(v8::InvocationCallback function) {
+inline v8::Local<v8::Function> Func(v8::InvocationCallback function) {
+  return v8::FunctionTemplate::New(function)->GetFunction();
+}
+
+inline v8::Local<v8::FunctionTemplate> Template(v8::InvocationCallback function) {
   return v8::FunctionTemplate::New(function);
 }
 
