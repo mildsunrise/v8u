@@ -106,6 +106,8 @@ Then include it:
 #include "v8u.hpp"
 ```
 
+Be sure to do [this](https://github.com/TooTallNate/node-gyp/issues/17#issuecomment-3917672) in your `binding.gyp`.
+
 Now, **let the fun begin!**  
 See the [tutorial](https://github.com/jmendeth/v8u/wiki/tutorial) to get started.
 
