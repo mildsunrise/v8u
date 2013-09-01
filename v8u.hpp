@@ -379,6 +379,16 @@ inline v8::Persistent<v8::Array> Arr(v8::Persistent<v8::Value> hdl) {
   return v8::Persistent<v8::Array>::Cast(hdl);
 }
 
+inline v8::Handle<v8::Function> Func(v8::Handle<v8::Value> hdl) {
+  return v8::Handle<v8::Function>::Cast(hdl);
+}
+inline v8::Local<v8::Function> Func(v8::Local<v8::Value> hdl) {
+  return v8::Local<v8::Function>::Cast(hdl);
+}
+inline v8::Persistent<v8::Function> Func(v8::Persistent<v8::Value> hdl) {
+  return v8::Persistent<v8::Function>::Cast(hdl);
+}
+
 template <class T> inline v8::Handle<T> Cast(v8::Handle<v8::Value> hdl) {
   return v8::Handle<T>::Cast(hdl);
 }
