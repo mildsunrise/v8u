@@ -24,7 +24,7 @@ It takes _one_ string as argument, and just returns it untouched:
 > Hello = require('./simpleaddon').Hello;
 [Function: Hello]
 > hello = new Hello();
-{ world: [Function] }
+{}
 > hello.world('the cat!')
 'the cat!'
 ```
