@@ -112,7 +112,10 @@ inline void CheckArguments(int min, const v8::Arguments& args) {
 V8_SCB(IDENTIFIER) {                                                           \
   V8_WRAP_START()
 
-#define V8_CB_END() V8_WRAP_END() }
+#define V8_CB_END()                                                            \
+    return v8::Undefined();                                                    \
+  V8_WRAP_END()                                                                \
+}
 
 // V8 getter templates
 
