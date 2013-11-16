@@ -41,6 +41,7 @@ namespace v8u {
 
 #define V8_THROW(VALUE) throw v8::Persistent<v8::Value>::New(VALUE)
 #define V8_STHROW(VALUE) return v8::ThrowException(VALUE)
+#define V8_STHROW_NR(VALUE) {v8::ThrowException(VALUE); return;}
 #define V8_RET(VALUE) return scope.Close(VALUE)
 
 #define V8_WRAP_START()                                                        \
@@ -49,43 +50,41 @@ namespace v8u {
 
 #define V8_WRAP_END()                                                          \
   } catch (v8::Persistent<v8::Value>& err) {                                   \
-    v8::Local<v8::Value> loc = v8::Local<v8::Value>::New(err);                 \
     err.Dispose();                                                             \
-    return ThrowException(loc);                                                \
+    V8_STHROW(err);                                                            \
   } catch (std::exception& err) {                                              \
-    return ThrowException(v8::Exception::Error(v8::String::New(err.what())));  \
+    V8_STHROW(v8::Exception::Error(v8::String::New(err.what())));              \
   } catch (v8::Handle<v8::Value>& err) {                                       \
-    return ThrowException(err);                                                \
+    V8_STHROW(err);                                                            \
   } catch (v8::Value*& err) {                                                  \
-    return ThrowException(v8::Handle<v8::Value>(err));                         \
+    V8_STHROW(v8::Handle<v8::Value>(err));                                     \
   } catch (std::string& err) {                                                 \
-    return ThrowException(v8::Exception::Error(v8::String::New(err.data(), err.length())));\
+    V8_STHROW(v8::Exception::Error(v8::String::New(err.data(), err.length())));\
   } catch (...) {                                                              \
-    return ThrowException(v8::Exception::Error(v8::String::New("Unknown error!")));\
+    V8_STHROW(v8::Exception::Error(v8::String::New("Unknown error!")));        \
   }
 
 #define V8_WRAP_END_NR()                                                       \
   } catch (v8::Persistent<v8::Value>& err) {                                   \
-    v8::Local<v8::Value> loc = v8::Local<v8::Value>::New(err);                 \
     err.Dispose();                                                             \
-    ThrowException(loc);                                                       \
+    V8_STHROW_NR(err);                                                         \
   } catch (std::exception& err) {                                              \
-    ThrowException(v8::Exception::Error(v8::String::New(err.what())));         \
+    V8_STHROW_NR(v8::Exception::Error(v8::String::New(err.what())));           \
   } catch (v8::Handle<v8::Value>& err) {                                       \
-    ThrowException(err);                                                       \
+    V8_STHROW_NR(err);                                                         \
   } catch (v8::Value*& err) {                                                  \
-    ThrowException(v8::Handle<v8::Value>(err));                                \
+    V8_STHROW_NR(v8::Handle<v8::Value>(err));                                  \
   } catch (std::string& err) {                                                 \
-    ThrowException(v8::Exception::Error(v8::String::New(err.data(), err.length())));\
+    V8_STHROW_NR(v8::Exception::Error(v8::String::New(err.data(), err.length())));\
   } catch (...) {                                                              \
-    ThrowException(v8::Exception::Error(v8::String::New("Unknown error!")));   \
+    V8_STHROW_NR(v8::Exception::Error(v8::String::New("Unknown error!")));     \
   }
 
 // JS arguments
 
 inline void CheckArguments(int min, const v8::Arguments& args) {
   if (args.Length() < min)
-    throw v8::Persistent<v8::Value>::New(v8::Exception::RangeError(v8::String::New("Not enough arguments.")));
+    V8_THROW(v8::Exception::RangeError(v8::String::New("Not enough arguments.")));
 }
 
 // Internal macros, don't use! -------------------------------------------------
@@ -98,7 +97,7 @@ inline void CheckArguments(int min, const v8::Arguments& args) {
 #define _v8_ctor {                                                             \
   if (args[0]->IsExternal()) return args.This();                               \
   if (!args.IsConstructCall())                                                 \
-    return v8::ThrowException(v8u::ReferenceErr("You must call this as a constructor"));\
+    V8_STHROW(v8u::ReferenceErr("You must call this as a constructor"));       \
   V8_WRAP_START()                                                              \
     v8::Local<v8::Object> hdl = args.This();
 //------------------------------------------------------------------------------
@@ -113,7 +112,7 @@ V8_SCB(IDENTIFIER) {                                                           \
   V8_WRAP_START()
 
 #define V8_CB_END()                                                            \
-    return v8::Undefined();                                                    \
+    V8_RET(v8::Undefined());                                                   \
   V8_WRAP_END()                                                                \
 }
 
@@ -130,7 +129,9 @@ V8_SGET(IDENTIFIER) {                                                          \
 V8_ESGET(TYPE, IDENTIFIER) {                                                   \
   V8_WRAP_START()
 
-#define V8_GET_END() V8_WRAP_END() }
+#define V8_GET_END()                                                           \
+  V8_WRAP_END()                                                                \
+}
 
 // V8 setter templates
 
@@ -145,7 +146,9 @@ V8_SSET(IDENTIFIER) {                                                          \
 V8_ESSET(TYPE, IDENTIFIER) {                                                   \
   V8_WRAP_START()
 
-#define V8_SET_END() V8_WRAP_END_NR() }
+#define V8_SET_END()                                                           \
+  V8_WRAP_END_NR()                                                             \
+}
 
 
 // Other class-specific templates
@@ -161,14 +164,11 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
 V8_CB_END()
 
 // Special constructors: use within V8_[E]SCTOR() ------------------------------
-#define V8_CTOR_NO_ALL return v8::ThrowException(v8::Exception::TypeError(     \
-  v8::String::New("No instances of this exact type may be constructed.")       \
-));
+#define V8_CTOR_NO_ALL                                                         \
+  V8_STHROW(v8u::TypeErr("No instances of this exact type may be constructed."));
 #define V8_CTOR_NO_JS                                                          \
   if (args[0]->IsExternal()) return args.This();                               \
-  return v8::ThrowException(v8::Exception::TypeError(                          \
-    v8::String::New("You can't construct instances of this type directly.")    \
-  ));
+  V8_STHROW(v8u::TypeErr("You can't construct instances of this type directly."));
 //------------------------------------------------------------------------------
 
 //// For use with V8_CTOR only!
@@ -176,7 +176,7 @@ V8_CB_END()
 
 #define V8_M_UNWRAP(CPP_TYPE, OBJ)                                             \
   if (!CPP_TYPE::_templ->HasInstance(OBJ))                                     \
-    return v8::ThrowException(v8::Exception::TypeError(v8::String::New("Invalid object unwrapped.")));\
+    V8_STHROW(v8u::TypeErr("Invalid object unwrapped."));                      \
   CPP_TYPE* inst = node::ObjectWrap::Unwrap<CPP_TYPE>(OBJ);
 
 #define V8_STYPE(CPP_TYPE)                                                     \
@@ -236,7 +236,7 @@ V8_CB_END()
   }                                                                            \
   TYPE* TYPE::Unwrap(v8::Handle<v8::Object> obj) {                             \
     if (_templ->HasInstance(obj)) return node::ObjectWrap::Unwrap<TYPE>(obj);  \
-    V8_THROW(v8::Exception::TypeError(v8::String::New("Invalid object unwrapped.")));\
+    V8_THROW(v8u::TypeErr("Invalid object unwrapped."));                       \
   }
 
 #define V8_POST_TYPE(CPP_TYPE) v8::FunctionTemplate* CPP_TYPE::_templ = NULL;
