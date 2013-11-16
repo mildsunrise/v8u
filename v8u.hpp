@@ -87,21 +87,6 @@ inline void CheckArguments(int min, const v8::Arguments& args) {
     V8_THROW(v8::Exception::RangeError(v8::String::New("Not enough arguments.")));
 }
 
-// Internal macros, don't use! -------------------------------------------------
-#define _v8_getter(ID)                                                         \
-  v8::Handle<v8::Value> ID(v8::Local<v8::String> name,                         \
-                           const v8::AccessorInfo& info)
-#define _v8_setter(ID)                                                         \
-  void ID(v8::Local<v8::String> name, v8::Local<v8::Value> value,              \
-          const v8::AccessorInfo& info)
-#define _v8_ctor {                                                             \
-  if (args[0]->IsExternal()) return args.This();                               \
-  if (!args.IsConstructCall())                                                 \
-    V8_STHROW(v8u::ReferenceErr("You must call this as a constructor"));       \
-  V8_WRAP_START()                                                              \
-    v8::Local<v8::Object> hdl = args.This();
-//------------------------------------------------------------------------------
-
 // V8 callback templates
 
 #define V8_SCB(IDENTIFIER)                                                     \
@@ -117,6 +102,10 @@ V8_SCB(IDENTIFIER) {                                                           \
 }
 
 // V8 getter templates
+
+#define _v8_getter(ID)                                                         \
+  v8::Handle<v8::Value> ID(v8::Local<v8::String> name,                         \
+                           const v8::AccessorInfo& info)
 
 #define V8_SGET(IDENTIFIER) static _v8_getter(IDENTIFIER)
 #define V8_ESGET(TYPE, IDENTIFIER) _v8_getter(TYPE::IDENTIFIER)
@@ -135,6 +124,10 @@ V8_ESGET(TYPE, IDENTIFIER) {                                                   \
 
 // V8 setter templates
 
+#define _v8_setter(ID)                                                         \
+  void ID(v8::Local<v8::String> name, v8::Local<v8::Value> value,              \
+          const v8::AccessorInfo& info)
+
 #define V8_SSET(IDENTIFIER) static _v8_setter(IDENTIFIER)
 #define V8_ESSET(TYPE, IDENTIFIER) _v8_setter(TYPE::IDENTIFIER)
 
@@ -152,6 +145,13 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
 
 
 // Other class-specific templates
+
+#define _v8_ctor {                                                             \
+  if (args[0]->IsExternal()) return args.This();                               \
+  if (!args.IsConstructCall())                                                 \
+    V8_STHROW(v8u::ReferenceErr("You must call this as a constructor"));       \
+  V8_WRAP_START()                                                              \
+    v8::Local<v8::Object> hdl = args.This();
 
 #define V8_SCTOR() static V8_SCB(NewInstance)
 #define V8_ESCTOR(TYPE)   V8_SCB(TYPE::NewInstance)
