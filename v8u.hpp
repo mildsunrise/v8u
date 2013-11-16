@@ -43,42 +43,30 @@ namespace v8u {
 #define V8_STHROW(VALUE) return v8::ThrowException(VALUE)
 #define V8_STHROW_NR(VALUE) {v8::ThrowException(VALUE); return;}
 #define V8_RET(VALUE) return scope.Close(VALUE)
+#define __v8_implicit_return(HANDLE) return HANDLE;
 
 #define V8_WRAP_START()                                                        \
   v8::HandleScope scope;                                                       \
   try {
 
-#define V8_WRAP_END()                                                          \
+#define __v8_wrap_end(throw_type)                                              \
   } catch (v8::Persistent<v8::Value>& err) {                                   \
     err.Dispose();                                                             \
-    V8_STHROW(err);                                                            \
+    throw_type(err);                                                           \
   } catch (std::exception& err) {                                              \
-    V8_STHROW(v8::Exception::Error(v8::String::New(err.what())));              \
+    throw_type(v8::Exception::Error(v8::String::New(err.what())));             \
   } catch (v8::Handle<v8::Value>& err) {                                       \
-    V8_STHROW(err);                                                            \
+    throw_type(err);                                                           \
   } catch (v8::Value*& err) {                                                  \
-    V8_STHROW(v8::Handle<v8::Value>(err));                                     \
+    throw_type(v8::Handle<v8::Value>(err));                                    \
   } catch (std::string& err) {                                                 \
-    V8_STHROW(v8::Exception::Error(v8::String::New(err.data(), err.length())));\
+    throw_type(v8::Exception::Error(v8::String::New(err.data(), err.length())));\
   } catch (...) {                                                              \
-    V8_STHROW(v8::Exception::Error(v8::String::New("Unknown error!")));        \
+    throw_type(v8::Exception::Error(v8::String::New("Unknown error!")));       \
   }
 
-#define V8_WRAP_END_NR()                                                       \
-  } catch (v8::Persistent<v8::Value>& err) {                                   \
-    err.Dispose();                                                             \
-    V8_STHROW_NR(err);                                                         \
-  } catch (std::exception& err) {                                              \
-    V8_STHROW_NR(v8::Exception::Error(v8::String::New(err.what())));           \
-  } catch (v8::Handle<v8::Value>& err) {                                       \
-    V8_STHROW_NR(err);                                                         \
-  } catch (v8::Value*& err) {                                                  \
-    V8_STHROW_NR(v8::Handle<v8::Value>(err));                                  \
-  } catch (std::string& err) {                                                 \
-    V8_STHROW_NR(v8::Exception::Error(v8::String::New(err.data(), err.length())));\
-  } catch (...) {                                                              \
-    V8_STHROW_NR(v8::Exception::Error(v8::String::New("Unknown error!")));     \
-  }
+#define V8_WRAP_END()    __v8_wrap_end(V8_STHROW)
+#define V8_WRAP_END_NR() __v8_wrap_end(V8_STHROW_NR)
 
 // JS arguments
 
@@ -97,7 +85,7 @@ V8_SCB(IDENTIFIER) {                                                           \
   V8_WRAP_START()
 
 #define V8_CB_END()                                                            \
-    V8_RET(v8::Undefined());                                                   \
+    __v8_implicit_return(v8::Undefined())                                      \
   V8_WRAP_END()                                                                \
 }
 
@@ -160,8 +148,9 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
 #define V8_ECTOR(TYPE) V8_ESCTOR(TYPE) __v8_ctor
 
 #define V8_CTOR_END()                                                          \
-  return hdl;                                                                  \
-V8_CB_END()
+    __v8_implicit_return(hdl)                                                  \
+  V8_WRAP_END()                                                                \
+}
 
 // Special constructors: use within V8_[E]SCTOR() ------------------------------
 #define V8_CTOR_NO_ALL                                                         \
