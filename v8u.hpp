@@ -103,12 +103,12 @@ V8_SCB(IDENTIFIER) {                                                           \
 
 // V8 getter templates
 
-#define _v8_getter(ID)                                                         \
+#define __v8_getter(ID)                                                        \
   v8::Handle<v8::Value> ID(v8::Local<v8::String> name,                         \
                            const v8::AccessorInfo& info)
 
-#define V8_SGET(IDENTIFIER) static _v8_getter(IDENTIFIER)
-#define V8_ESGET(TYPE, IDENTIFIER) _v8_getter(TYPE::IDENTIFIER)
+#define V8_SGET(IDENTIFIER) static __v8_getter(IDENTIFIER)
+#define V8_ESGET(TYPE, IDENTIFIER) __v8_getter(TYPE::IDENTIFIER)
 
 #define V8_GET(IDENTIFIER)                                                     \
 V8_SGET(IDENTIFIER) {                                                          \
@@ -124,12 +124,12 @@ V8_ESGET(TYPE, IDENTIFIER) {                                                   \
 
 // V8 setter templates
 
-#define _v8_setter(ID)                                                         \
+#define __v8_setter(ID)                                                        \
   void ID(v8::Local<v8::String> name, v8::Local<v8::Value> value,              \
           const v8::AccessorInfo& info)
 
-#define V8_SSET(IDENTIFIER) static _v8_setter(IDENTIFIER)
-#define V8_ESSET(TYPE, IDENTIFIER) _v8_setter(TYPE::IDENTIFIER)
+#define V8_SSET(IDENTIFIER) static __v8_setter(IDENTIFIER)
+#define V8_ESSET(TYPE, IDENTIFIER) __v8_setter(TYPE::IDENTIFIER)
 
 #define V8_SET(IDENTIFIER)                                                     \
 V8_SSET(IDENTIFIER) {                                                          \
@@ -146,7 +146,7 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
 
 // Other class-specific templates
 
-#define _v8_ctor {                                                             \
+#define __v8_ctor {                                                            \
   if (args[0]->IsExternal()) return args.This();                               \
   if (!args.IsConstructCall())                                                 \
     V8_STHROW(v8u::ReferenceErr("You must call this as a constructor"));       \
@@ -156,8 +156,8 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
 #define V8_SCTOR() static V8_SCB(NewInstance)
 #define V8_ESCTOR(TYPE)   V8_SCB(TYPE::NewInstance)
 
-#define V8_CTOR()      V8_SCTOR() _v8_ctor
-#define V8_ECTOR(TYPE) V8_ESCTOR(TYPE) _v8_ctor
+#define V8_CTOR()      V8_SCTOR() __v8_ctor
+#define V8_ECTOR(TYPE) V8_ESCTOR(TYPE) __v8_ctor
 
 #define V8_CTOR_END()                                                          \
   return hdl;                                                                  \
@@ -321,16 +321,16 @@ inline v8::Local<v8::Array> Arr(int length = 0) {
   return v8::Array::New(length);
 }
 
-#define __V8_ERROR_CTOR(ERROR)                                                 \
+#define __v8_error_ctor(ERROR)                                                 \
 inline v8::Local<v8::Value> ERROR##Err(const char* msg) {                      \
   return v8::Exception::ERROR##Error(v8::String::New(msg));                    \
 }
 
-__V8_ERROR_CTOR()
-__V8_ERROR_CTOR(Range)
-__V8_ERROR_CTOR(Reference)
-__V8_ERROR_CTOR(Syntax)
-__V8_ERROR_CTOR(Type)
+__v8_error_ctor()
+__v8_error_ctor(Range)
+__v8_error_ctor(Reference)
+__v8_error_ctor(Syntax)
+__v8_error_ctor(Type)
 
 inline v8::Local<v8::Number> Num(double number) {
   return v8::Number::New(number);
