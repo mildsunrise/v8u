@@ -63,6 +63,15 @@ public:
     return ret.str();
   }
 
+  static V8_CB(ToArray) {
+    Version* inst = Unwrap(args.This());
+    v8::Local<v8::Array> arr = Arr(3);
+    arr->Set(0, Int(inst->major_));
+    arr->Set(1, Int(inst->minor_));
+    arr->Set(2, Int(inst->revision_));
+    V8_RET(arr);
+  } V8_CB_END()
+
   static V8_CB(ToString) {
     Version* inst = Unwrap(args.This());
     std::string ret = inst->toString();
@@ -109,6 +118,7 @@ public:
     V8_DEF_ACC("revision", GetRevision, SetRevision);
 
     V8_DEF_CB("toString", ToString);
+    V8_DEF_CB("toArray", ToArray);
     V8_DEF_CB("inspect", Inspect);
   } NODE_TYPE_END()
 private:
