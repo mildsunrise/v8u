@@ -33,17 +33,26 @@
 #include <map>
 
 #include <node.h>
+#include <node_version.h>
 #include <v8.h>
 
 namespace v8u {
 
+#if NODE_VERSION_AT_LEAST(0,11,8)
+  #define V8_STHROW(VALUE) {args->GetIsolate()->ThrowException(VALUE); return;}
+  #define V8_STHROW_NR V8_STHROW
+  #define V8_RET(VALUE) {args->GetReturnValue()->Set(VALUE); return;}
+  #define __v8_implicit_return(HANDLE)
+#else
+  #define V8_STHROW(VALUE) return v8::ThrowException(VALUE)
+  #define V8_STHROW_NR(VALUE) {v8::ThrowException(VALUE); return;}
+  #define V8_RET(VALUE) return scope.Close(VALUE)
+  #define __v8_implicit_return(HANDLE) return HANDLE;
+#endif
+
 // V8 exception wrapping
 
 #define V8_THROW(VALUE) throw v8::Persistent<v8::Value>::New(VALUE)
-#define V8_STHROW(VALUE) return v8::ThrowException(VALUE)
-#define V8_STHROW_NR(VALUE) {v8::ThrowException(VALUE); return;}
-#define V8_RET(VALUE) return scope.Close(VALUE)
-#define __v8_implicit_return(HANDLE) return HANDLE;
 
 #define V8_WRAP_START()                                                        \
   v8::HandleScope scope;                                                       \
@@ -77,8 +86,13 @@ inline void CheckArguments(int min, const v8::Arguments& args) {
 
 // V8 callback templates
 
-#define V8_SCB(IDENTIFIER)                                                     \
-  v8::Handle<v8::Value> IDENTIFIER(const v8::Arguments& args)
+#if NODE_VERSION_AT_LEAST(0,11,8)
+  #define V8_SCB(IDENTIFIER)                                                   \
+    void IDENTIFIER(const v8::FunctionCallbackInfo<v8::Value>& args)
+#else
+  #define V8_SCB(IDENTIFIER)                                                   \
+    v8::Handle<v8::Value> IDENTIFIER(const v8::Arguments& args)
+#endif
 
 #define V8_CB(IDENTIFIER)                                                      \
 V8_SCB(IDENTIFIER) {                                                           \
@@ -91,9 +105,15 @@ V8_SCB(IDENTIFIER) {                                                           \
 
 // V8 getter templates
 
-#define __v8_getter(ID)                                                        \
-  v8::Handle<v8::Value> ID(v8::Local<v8::String> name,                         \
-                           const v8::AccessorInfo& info)
+#if NODE_VERSION_AT_LEAST(0,11,8)
+  #define __v8_getter(ID)                                                      \
+    void ID(v8::Local<v8::String> name,                                        \
+            const v8::PropertyCallbackInfo<Value>& info)
+#else
+  #define __v8_getter(ID)                                                      \
+    v8::Handle<v8::Value> ID(v8::Local<v8::String> name,                       \
+                             const v8::AccessorInfo& info)
+#endif
 
 #define V8_SGET(IDENTIFIER) static __v8_getter(IDENTIFIER)
 #define V8_ESGET(TYPE, IDENTIFIER) __v8_getter(TYPE::IDENTIFIER)
@@ -112,9 +132,17 @@ V8_ESGET(TYPE, IDENTIFIER) {                                                   \
 
 // V8 setter templates
 
-#define __v8_setter(ID)                                                        \
-  void ID(v8::Local<v8::String> name, v8::Local<v8::Value> value,              \
-          const v8::AccessorInfo& info)
+#if NODE_VERSION_AT_LEAST(0,11,8)
+  #define __v8_setter(ID)                                                      \
+    void ID(v8::Local<v8::String> name,                                        \
+            v8::Local<v8::Value> value,                                        \
+            const v8::PropertyCallbackInfo<Value>& info)
+#else
+  #define __v8_setter(ID)                                                      \
+    void ID(v8::Local<v8::String> name,                                        \
+            v8::Local<v8::Value> value,                                        \
+            const v8::AccessorInfo& info)
+#endif
 
 #define V8_SSET(IDENTIFIER) static __v8_setter(IDENTIFIER)
 #define V8_ESSET(TYPE, IDENTIFIER) __v8_setter(TYPE::IDENTIFIER)
@@ -168,6 +196,12 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
     V8_STHROW(v8u::TypeErr("Invalid object unwrapped."));                      \
   CPP_TYPE* inst = node::ObjectWrap::Unwrap<CPP_TYPE>(OBJ);
 
+#if NODE_VERSION_AT_LEAST(0,11,4)
+  #define __node_get_handle() handle()
+#else
+  #define __node_get_handle() handle_
+#endif
+
 #define V8_STYPE(CPP_TYPE)                                                     \
   static v8::FunctionTemplate* _templ;                                         \
   /**
@@ -194,14 +228,15 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
   virtual v8::Local<v8::Object> Wrapped() {                                    \
     v8::HandleScope scope;                                                     \
                                                                                \
-    if (handle_.IsEmpty()) {                                                   \
+    v8::Handle<v8::Object> handle = __node_get_handle();                       \
+    if (handle.IsEmpty()) {                                                    \
       v8::Handle<v8::Value> args [1] = {v8::External::New(this)};              \
-      Wrap(_templ->GetFunction()->NewInstance(1,args));                        \
+      handle = _templ->GetFunction()->NewInstance(1,args);                     \
+      Wrap(handle);                                                            \
     }                                                                          \
-    return scope.Close(handle_);                                               \
+    return scope.Close(handle);                                                \
   }                                                                            \
   static bool HasInstance(v8::Handle<v8::Object> obj) {                        \
-    v8::HandleScope scope;                                                     \
     return _templ->HasInstance(obj);                                           \
   }                                                                            \
   inline static CPP_TYPE* Unwrap(v8::Handle<v8::Object> obj) {                 \
@@ -213,14 +248,15 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
   v8::Local<v8::Object> TYPE::Wrapped() {                                      \
     v8::HandleScope scope;                                                     \
                                                                                \
-    if (handle_.IsEmpty()) {                                                   \
+    v8::Handle<v8::Object> handle = __node_get_handle();                       \
+    if (handle.IsEmpty()) {                                                    \
       v8::Handle<v8::Value> args [1] = {v8::External::New(this)};              \
-      Wrap(_templ->GetFunction()->NewInstance(1,args));                        \
+      handle = _templ->GetFunction()->NewInstance(1,args);                     \
+      Wrap(handle);                                                            \
     }                                                                          \
-    return scope.Close(handle_);                                               \
+    return scope.Close(handle);                                                \
   }                                                                            \
   bool TYPE::HasInstance(v8::Handle<v8::Object> obj) {                         \
-    v8::HandleScope scope;                                                     \
     return _templ->HasInstance(obj);                                           \
   }                                                                            \
   TYPE* TYPE::Unwrap(v8::Handle<v8::Object> obj) {                             \
@@ -421,7 +457,7 @@ inline bool Bool(v8::Handle<v8::Value> hdl) {
 //FIXME: add V8_DEF_SET
 
 #define V8_DEF_CB(V8_NAME, CPP_METHOD)                                         \
-  inst->Set(v8::String::NewSymbol(V8_NAME), v8::FunctionTemplate::New(CPP_METHOD)->GetFunction())
+  inst->Set(v8u::Symbol(V8_NAME), v8u::Func(CPP_METHOD))
 
 #define V8_INHERIT(CPP_TYPE) templ->Inherit(CPP_TYPE::_templ)
 
