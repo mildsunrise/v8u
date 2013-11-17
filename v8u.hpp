@@ -39,13 +39,13 @@
 namespace v8u {
 
 #if NODE_VERSION_AT_LEAST(0,11,8)
-  #define V8_STHROW(VALUE) {args->GetIsolate()->ThrowException(VALUE); return;}
-  #define V8_STHROW_NR V8_STHROW
+  #define V8_STHROW_NR(VALUE) args->GetIsolate()->ThrowException(VALUE)
+  #define V8_STHROW(VALUE) {V8_STHROW_NR(VALUE); return;}
   #define V8_RET(VALUE) {args->GetReturnValue()->Set(VALUE); return;}
   #define __v8_implicit_return(HANDLE)
 #else
-  #define V8_STHROW(VALUE) return v8::ThrowException(VALUE)
-  #define V8_STHROW_NR(VALUE) {v8::ThrowException(VALUE); return;}
+  #define V8_STHROW_NR(VALUE) v8::ThrowException(VALUE)
+  #define V8_STHROW(VALUE) return V8_STHROW_NR(VALUE)
   #define V8_RET(VALUE) return scope.Close(VALUE)
   #define __v8_implicit_return(HANDLE) return HANDLE;
 #endif
@@ -58,24 +58,21 @@ namespace v8u {
   v8::HandleScope scope;                                                       \
   try {
 
-#define __v8_wrap_end(throw_type)                                              \
+#define V8_WRAP_END()                                                          \
   } catch (v8::Persistent<v8::Value>& err) {                                   \
+    V8_STHROW_NR(err);                                                         \
     err.Dispose();                                                             \
-    throw_type(err);                                                           \
   } catch (std::exception& err) {                                              \
-    throw_type(v8::Exception::Error(v8::String::New(err.what())));             \
+    V8_STHROW_NR(v8::Exception::Error(v8::String::New(err.what())));           \
   } catch (v8::Handle<v8::Value>& err) {                                       \
-    throw_type(err);                                                           \
+    V8_STHROW_NR(err);                                                         \
   } catch (v8::Value*& err) {                                                  \
-    throw_type(v8::Handle<v8::Value>(err));                                    \
+    V8_STHROW_NR(v8::Handle<v8::Value>(err));                                  \
   } catch (std::string& err) {                                                 \
-    throw_type(v8::Exception::Error(v8::String::New(err.data(), err.length())));\
+    V8_STHROW_NR(v8::Exception::Error(v8::String::New(err.data(), err.length())));\
   } catch (...) {                                                              \
-    throw_type(v8::Exception::Error(v8::String::New("Unknown error!")));       \
+    V8_STHROW_NR(v8::Exception::Error(v8::String::New("Unknown error!")));     \
   }
-
-#define V8_WRAP_END()    __v8_wrap_end(V8_STHROW)
-#define V8_WRAP_END_NR() __v8_wrap_end(V8_STHROW_NR)
 
 // JS arguments
 
@@ -99,8 +96,8 @@ V8_SCB(IDENTIFIER) {                                                           \
   V8_WRAP_START()
 
 #define V8_CB_END()                                                            \
-    __v8_implicit_return(v8::Undefined())                                      \
   V8_WRAP_END()                                                                \
+  __v8_implicit_return(v8::Undefined())                                        \
 }
 
 // V8 getter templates
@@ -128,6 +125,7 @@ V8_ESGET(TYPE, IDENTIFIER) {                                                   \
 
 #define V8_GET_END()                                                           \
   V8_WRAP_END()                                                                \
+  __v8_implicit_return(v8::Undefined())                                        \
 }
 
 // V8 setter templates
@@ -156,18 +154,18 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
   V8_WRAP_START()
 
 #define V8_SET_END()                                                           \
-  V8_WRAP_END_NR()                                                             \
+  V8_WRAP_END()                                                                \
 }
 
 
 // Other class-specific templates
 
 #define __v8_ctor {                                                            \
-  if (args[0]->IsExternal()) return args.This();                               \
+  v8::Local<v8::Object> hdl = args.This();                                     \
+  if (args[0]->IsExternal()) return hdl;                                       \
   if (!args.IsConstructCall())                                                 \
     V8_STHROW(v8u::ReferenceErr("You must call this as a constructor"));       \
-  V8_WRAP_START()                                                              \
-    v8::Local<v8::Object> hdl = args.This();
+  V8_WRAP_START()
 
 #define V8_SCTOR() static V8_SCB(NewInstance)
 #define V8_ESCTOR(TYPE)   V8_SCB(TYPE::NewInstance)
@@ -176,8 +174,8 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
 #define V8_ECTOR(TYPE) V8_ESCTOR(TYPE) __v8_ctor
 
 #define V8_CTOR_END()                                                          \
-    __v8_implicit_return(hdl)                                                  \
   V8_WRAP_END()                                                                \
+  __v8_implicit_return(hdl)                                                    \
 }
 
 // Special constructors: use within V8_[E]SCTOR() ------------------------------
