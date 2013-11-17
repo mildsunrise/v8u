@@ -131,7 +131,7 @@ NODE_DEF_MAIN() {
   // Put my version
   target->Set(
     v8u::Symbol("myversion"),
-    new v8u::Version(2,9,1)->Wrapped()
+    (new v8u::Version(2,9,1))->Wrapped()
   );
 } NODE_DEF_MAIN_END(mymodule)
 ```
