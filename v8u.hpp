@@ -34,18 +34,30 @@
 
 #include <node.h>
 #include <node_version.h>
+#include <node_object_wrap.h>
 #include <v8.h>
 
 namespace v8u {
 
 #if NODE_VERSION_AT_LEAST(0,11,8)
-  #define V8_STHROW_NR(VALUE) args->GetIsolate()->ThrowException(VALUE)
+  //#define __node_isolate node::node_isolate
+  //#define __node_isolate info.GetIsolate()
+  #define __node_isolate v8::Isolate::GetCurrent()
+  
+  #if NODE_VERSION_AT_LEAST(0,11,9)
+    #define V8_STHROW_NR(VALUE)  __node_isolate->ThrowException(VALUE) 
+  #else
+    #define V8_STHROW_NR(VALUE) v8::ThrowException(VALUE)
+  #endif
+  
   #define V8_STHROW(VALUE) {V8_STHROW_NR(VALUE); return;}
-  #define V8_RET(VALUE) {args->GetReturnValue()->Set(VALUE); return;}
-  #define __v8_implicit_return(HANDLE)
+  #define V8_HANDLE_SCOPE(VARIABLE) v8::HandleScope scope (__node_isolate)
+  #define V8_RET(VALUE) {info.GetReturnValue().Set(VALUE); return;}
+  #define __v8_implicit_return(HANDLE) // implicit return not needed
 #else
   #define V8_STHROW_NR(VALUE) v8::ThrowException(VALUE)
   #define V8_STHROW(VALUE) return V8_STHROW_NR(VALUE)
+  #define V8_HANDLE_SCOPE(VARIABLE) v8::HandleScope scope
   #define V8_RET(VALUE) return scope.Close(VALUE)
   #define __v8_implicit_return(HANDLE) return HANDLE;
 #endif
@@ -55,7 +67,7 @@ namespace v8u {
 #define V8_THROW(VALUE) throw v8::Persistent<v8::Value>::New(VALUE)
 
 #define V8_WRAP_START()                                                        \
-  v8::HandleScope scope;                                                       \
+  V8_HANDLE_SCOPE(scope);                                                      \
   try {
 
 #define V8_WRAP_END()                                                          \
@@ -76,8 +88,14 @@ namespace v8u {
 
 // JS arguments
 
-inline void CheckArguments(int min, const v8::Arguments& args) {
-  if (args.Length() < min)
+#if NODE_VERSION_AT_LEAST(0,11,8)
+  #define __v8_arguments_type v8::FunctionCallbackInfo<v8::Value>
+#else
+  #define __v8_arguments_type v8::Arguments
+#endif
+
+inline void CheckArguments(int min, const __v8_arguments_type& info) {
+  if (info.Length() < min)
     V8_THROW(v8::Exception::RangeError(v8::String::New("Not enough arguments.")));
 }
 
@@ -85,10 +103,10 @@ inline void CheckArguments(int min, const v8::Arguments& args) {
 
 #if NODE_VERSION_AT_LEAST(0,11,8)
   #define V8_SCB(IDENTIFIER)                                                   \
-    void IDENTIFIER(const v8::FunctionCallbackInfo<v8::Value>& args)
+    void IDENTIFIER(const v8::FunctionCallbackInfo<v8::Value>& info)
 #else
   #define V8_SCB(IDENTIFIER)                                                   \
-    v8::Handle<v8::Value> IDENTIFIER(const v8::Arguments& args)
+    v8::Handle<v8::Value> IDENTIFIER(const v8::Arguments& info)
 #endif
 
 #define V8_CB(IDENTIFIER)                                                      \
@@ -105,7 +123,7 @@ V8_SCB(IDENTIFIER) {                                                           \
 #if NODE_VERSION_AT_LEAST(0,11,8)
   #define __v8_getter(ID)                                                      \
     void ID(v8::Local<v8::String> name,                                        \
-            const v8::PropertyCallbackInfo<Value>& info)
+            const v8::PropertyCallbackInfo<v8::Value>& info)
 #else
   #define __v8_getter(ID)                                                      \
     v8::Handle<v8::Value> ID(v8::Local<v8::String> name,                       \
@@ -134,7 +152,7 @@ V8_ESGET(TYPE, IDENTIFIER) {                                                   \
   #define __v8_setter(ID)                                                      \
     void ID(v8::Local<v8::String> name,                                        \
             v8::Local<v8::Value> value,                                        \
-            const v8::PropertyCallbackInfo<Value>& info)
+            const v8::PropertyCallbackInfo<void>& info)
 #else
   #define __v8_setter(ID)                                                      \
     void ID(v8::Local<v8::String> name,                                        \
@@ -161,9 +179,9 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
 // Other class-specific templates
 
 #define __v8_ctor {                                                            \
-  v8::Local<v8::Object> hdl = args.This();                                     \
-  if (args[0]->IsExternal()) return hdl;                                       \
-  if (!args.IsConstructCall())                                                 \
+  v8::Local<v8::Object> hdl = info.This();                                     \
+  if (info[0]->IsExternal()) return hdl;                                       \
+  if (!info.IsConstructCall())                                                 \
     V8_STHROW(v8u::ReferenceErr("You must call this as a constructor"));       \
   V8_WRAP_START()
 
@@ -182,7 +200,7 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
 #define V8_CTOR_NO_ALL                                                         \
   V8_STHROW(v8u::TypeErr("No instances of this exact type may be constructed."));
 #define V8_CTOR_NO_JS                                                          \
-  if (args[0]->IsExternal()) return args.This();                               \
+  if (info[0]->IsExternal()) return info.This();                               \
   V8_STHROW(v8u::TypeErr("You can't construct instances of this type directly."));
 //------------------------------------------------------------------------------
 
@@ -195,13 +213,15 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
   CPP_TYPE* inst = node::ObjectWrap::Unwrap<CPP_TYPE>(OBJ);
 
 #if NODE_VERSION_AT_LEAST(0,11,4)
-  #define __node_get_handle() handle()
+  #define __node_handle_pollyfill
 #else
-  #define __node_get_handle() handle_
+  #define __node_handle_pollyfill                                              \
+    inline v8::Handle<v8::Object> handle() {return handle_}
 #endif
 
 #define V8_STYPE(CPP_TYPE)                                                     \
   static v8::FunctionTemplate* _templ;                                         \
+  __node_handle_pollyfill                                                      \
   /**
    * Returns the unique V8 v8::Object corresponding to this C++ instance.
    * For this to work, you should use V8_CL_CTOR.
@@ -215,6 +235,7 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
 
 #define V8_TYPE(CPP_TYPE)                                                      \
   static v8::FunctionTemplate* _templ;                                         \
+  __node_handle_pollyfill                                                      \
   /**
    * Returns the unique V8 v8::Object corresponding to this C++ instance.
    * For this to work, you should use V8_[E]CTOR.
@@ -224,9 +245,9 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
    * EVENTUALLY MAKING YOU BASH YOUR HEAD AGAINST A WALL. YOU HAVE BEEN WARNED.
    **/                                                                         \
   virtual v8::Local<v8::Object> Wrapped() {                                    \
-    v8::HandleScope scope;                                                     \
+    V8_HANDLE_SCOPE(scope);                                                    \
                                                                                \
-    v8::Handle<v8::Object> handle = __node_get_handle();                       \
+    v8::Handle<v8::Object> handle = this->handle();                            \
     if (handle.IsEmpty()) {                                                    \
       v8::Handle<v8::Value> args [1] = {v8::External::New(this)};              \
       handle = _templ->GetFunction()->NewInstance(1,args);                     \
@@ -244,9 +265,9 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
 
 #define V8_ETYPE(TYPE)                                                         \
   v8::Local<v8::Object> TYPE::Wrapped() {                                      \
-    v8::HandleScope scope;                                                     \
+    V8_HANDLE_SCOPE(scope);                                                    \
                                                                                \
-    v8::Handle<v8::Object> handle = __node_get_handle();                       \
+    v8::Handle<v8::Object> handle = this->handle();                            \
     if (handle.IsEmpty()) {                                                    \
       v8::Handle<v8::Value> args [1] = {v8::External::New(this)};              \
       handle = _templ->GetFunction()->NewInstance(1,args);                     \
@@ -471,7 +492,7 @@ inline bool Bool(v8::Handle<v8::Value> hdl) {
 #define NODE_DEF_MAIN()                                                        \
   extern "C" {                                                                 \
     NODE_DEF(init) {                                                           \
-      v8::HandleScope scope;
+      V8_HANDLE_SCOPE(scope);
 
 #define NODE_DEF_MAIN_END(MODULE) }                                            \
     NODE_MODULE(MODULE, init); }
@@ -483,13 +504,13 @@ inline bool Bool(v8::Handle<v8::Value> hdl) {
 
 #define NODE_DEF_TYPE(V8_NAME)                                                 \
   inline NODE_SDEF_TYPE() {                                                    \
-    v8::HandleScope scope;                                                     \
+    V8_HANDLE_SCOPE(scope);                                                    \
     V8_DEF_TYPE_PRE()                                                          \
     V8_DEF_TYPE(V8_NAME)
 
 #define NODE_EDEF_TYPE(TYPE, V8_NAME)                                          \
   NODE_ESDEF_TYPE(TYPE) {                                                      \
-    v8::HandleScope scope;                                                     \
+    V8_HANDLE_SCOPE(scope);                                                    \
     V8_DEF_TYPE_PRE()                                                          \
     V8_DEF_TYPE(V8_NAME)
 
@@ -510,7 +531,7 @@ inline bool Bool(v8::Handle<v8::Value> hdl) {
       target->Set(v8::String::NewSymbol(V8_NAME), v8::Handle<v8::Function>(_templ->GetFunction()));\
       return;                                                                  \
     }                                                                          \
-    v8::HandleScope scope;                                                     \
+    V8_HANDLE_SCOPE(scope);                                                    \
     V8_DEF_TYPE_PRE()                                                          \
     V8_DEF_TYPE(V8_NAME)
 
@@ -521,7 +542,7 @@ inline bool Bool(v8::Handle<v8::Value> hdl) {
       target->Set(v8::String::NewSymbol(V8_NAME), v8::Handle<v8::Function>(_templ->GetFunction()));\
       return;                                                                  \
     }                                                                          \
-    v8::HandleScope scope;                                                     \
+    V8_HANDLE_SCOPE(scope);                                                    \
     V8_DEF_TYPE_PRE()                                                          \
     V8_DEF_TYPE(V8_NAME)
 
