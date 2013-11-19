@@ -121,24 +121,17 @@ V8_SCB(IDENTIFIER) {                                                           \
 // V8 getter templates
 
 #if NODE_VERSION_AT_LEAST(0,11,8)
-  #define __v8_getter(ID)                                                      \
+  #define V8_SGET(ID)                                                          \
     void ID(v8::Local<v8::String> name,                                        \
             const v8::PropertyCallbackInfo<v8::Value>& info)
 #else
-  #define __v8_getter(ID)                                                      \
+  #define V8_SGET(ID)                                                          \
     v8::Handle<v8::Value> ID(v8::Local<v8::String> name,                       \
                              const v8::AccessorInfo& info)
 #endif
 
-#define V8_SGET(IDENTIFIER) static __v8_getter(IDENTIFIER)
-#define V8_ESGET(TYPE, IDENTIFIER) __v8_getter(TYPE::IDENTIFIER)
-
 #define V8_GET(IDENTIFIER)                                                     \
 V8_SGET(IDENTIFIER) {                                                          \
-  V8_WRAP_START()
-
-#define V8_EGET(TYPE, IDENTIFIER)                                              \
-V8_ESGET(TYPE, IDENTIFIER) {                                                   \
   V8_WRAP_START()
 
 #define V8_GET_END()                                                           \
@@ -149,26 +142,19 @@ V8_ESGET(TYPE, IDENTIFIER) {                                                   \
 // V8 setter templates
 
 #if NODE_VERSION_AT_LEAST(0,11,8)
-  #define __v8_setter(ID)                                                      \
+  #define V8_SSET(ID)                                                          \
     void ID(v8::Local<v8::String> name,                                        \
             v8::Local<v8::Value> value,                                        \
             const v8::PropertyCallbackInfo<void>& info)
 #else
-  #define __v8_setter(ID)                                                      \
+  #define V8_SSET(ID)                                                          \
     void ID(v8::Local<v8::String> name,                                        \
             v8::Local<v8::Value> value,                                        \
             const v8::AccessorInfo& info)
 #endif
 
-#define V8_SSET(IDENTIFIER) static __v8_setter(IDENTIFIER)
-#define V8_ESSET(TYPE, IDENTIFIER) __v8_setter(TYPE::IDENTIFIER)
-
 #define V8_SET(IDENTIFIER)                                                     \
 V8_SSET(IDENTIFIER) {                                                          \
-  V8_WRAP_START()
-
-#define V8_ESET(TYPE, IDENTIFIER)                                              \
-V8_ESSET(TYPE, IDENTIFIER) {                                                   \
   V8_WRAP_START()
 
 #define V8_SET_END()                                                           \
@@ -208,9 +194,11 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
 #define V8_WRAP(INSTANCE) (INSTANCE)->Wrap(hdl)
 
 #define V8_M_UNWRAP(CPP_TYPE, OBJ)                                             \
-  if (!CPP_TYPE::_templ->HasInstance(OBJ))                                     \
+  if (!CPP_TYPE::templ_->HasInstance(OBJ))                                     \
     V8_STHROW(v8u::TypeErr("Invalid object unwrapped."));                      \
   CPP_TYPE* inst = node::ObjectWrap::Unwrap<CPP_TYPE>(OBJ);
+
+// Type functions
 
 #if NODE_VERSION_AT_LEAST(0,11,4)
   #define __node_handle_pollyfill
@@ -220,7 +208,7 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
 #endif
 
 #define V8_STYPE(CPP_TYPE)                                                     \
-  static v8::FunctionTemplate* _templ;                                         \
+  static v8::FunctionTemplate* templ_;                                         \
   __node_handle_pollyfill                                                      \
   /**
    * Returns the unique V8 v8::Object corresponding to this C++ instance.
@@ -234,7 +222,7 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
   inline static CPP_TYPE* Unwrap(v8::Handle<v8::Object> obj)
 
 #define V8_TYPE(CPP_TYPE)                                                      \
-  static v8::FunctionTemplate* _templ;                                         \
+  static v8::FunctionTemplate* templ_;                                         \
   __node_handle_pollyfill                                                      \
   /**
    * Returns the unique V8 v8::Object corresponding to this C++ instance.
@@ -250,16 +238,16 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
     v8::Handle<v8::Object> handle = this->handle();                            \
     if (handle.IsEmpty()) {                                                    \
       v8::Handle<v8::Value> args [1] = {v8::External::New(this)};              \
-      handle = _templ->GetFunction()->NewInstance(1,args);                     \
+      handle = templ_->GetFunction()->NewInstance(1,args);                     \
       Wrap(handle);                                                            \
     }                                                                          \
     return scope.Close(handle);                                                \
   }                                                                            \
   static bool HasInstance(v8::Handle<v8::Object> obj) {                        \
-    return _templ->HasInstance(obj);                                           \
+    return templ_->HasInstance(obj);                                           \
   }                                                                            \
   inline static CPP_TYPE* Unwrap(v8::Handle<v8::Object> obj) {                 \
-    if (_templ->HasInstance(obj)) return node::ObjectWrap::Unwrap<CPP_TYPE>(obj);\
+    if (templ_->HasInstance(obj)) return node::ObjectWrap::Unwrap<CPP_TYPE>(obj);\
     V8_THROW(v8::Exception::TypeError(v8::String::New("Invalid object unwrapped.")));\
   }
 
@@ -270,20 +258,20 @@ V8_ESSET(TYPE, IDENTIFIER) {                                                   \
     v8::Handle<v8::Object> handle = this->handle();                            \
     if (handle.IsEmpty()) {                                                    \
       v8::Handle<v8::Value> args [1] = {v8::External::New(this)};              \
-      handle = _templ->GetFunction()->NewInstance(1,args);                     \
+      handle = templ_->GetFunction()->NewInstance(1,args);                     \
       Wrap(handle);                                                            \
     }                                                                          \
     return scope.Close(handle);                                                \
   }                                                                            \
   bool TYPE::HasInstance(v8::Handle<v8::Object> obj) {                         \
-    return _templ->HasInstance(obj);                                           \
+    return templ_->HasInstance(obj);                                           \
   }                                                                            \
   TYPE* TYPE::Unwrap(v8::Handle<v8::Object> obj) {                             \
-    if (_templ->HasInstance(obj)) return node::ObjectWrap::Unwrap<TYPE>(obj);  \
+    if (templ_->HasInstance(obj)) return node::ObjectWrap::Unwrap<TYPE>(obj);  \
     V8_THROW(v8u::TypeErr("Invalid object unwrapped."));                       \
   }
 
-#define V8_POST_TYPE(CPP_TYPE) v8::FunctionTemplate* CPP_TYPE::_templ = NULL;
+#define V8_POST_TYPE(CPP_TYPE) v8::FunctionTemplate* CPP_TYPE::templ_ = NULL;
 
 // Dealing with V8 persistent handles
 
@@ -357,6 +345,10 @@ inline v8::Local<v8::String> Symbol(const char* data, int length = -1) {
   return v8::String::NewSymbol(data, length);
 }
 
+inline v8::Local<v8::String> Symbol(std::string str) {
+  return v8::String::NewSymbol(str.data(), str.length());
+}
+
 inline v8::Local<v8::Object> Obj() {
   return v8::Object::New();
 }
@@ -368,6 +360,9 @@ inline v8::Local<v8::Array> Arr(int length = 0) {
 #define __v8_error_ctor(ERROR)                                                 \
 inline v8::Local<v8::Value> ERROR##Err(const char* msg) {                      \
   return v8::Exception::ERROR##Error(v8::String::New(msg));                    \
+}                                                                              \
+inline v8::Local<v8::Value> ERROR##Err(v8::Handle<v8::String> msg) {           \
+  return v8::Exception::ERROR##Error(msg);                                     \
 }
 
 __v8_error_ctor()
@@ -478,7 +473,7 @@ inline bool Bool(v8::Handle<v8::Value> hdl) {
 #define V8_DEF_CB(V8_NAME, CPP_METHOD)                                         \
   inst->Set(v8u::Symbol(V8_NAME), v8u::Func(CPP_METHOD))
 
-#define V8_INHERIT(CPP_TYPE) templ->Inherit(CPP_TYPE::_templ)
+#define V8_INHERIT(CPP_TYPE) templ->Inherit(CPP_TYPE::templ_)
 
 // Templates for definition methods on Node
 
@@ -527,8 +522,8 @@ inline bool Bool(v8::Handle<v8::Value> hdl) {
 #define NODE_TYPE(CPP_TYPE, V8_NAME)                                           \
   V8_TYPE(CPP_TYPE)                                                            \
   inline NODE_SDEF_TYPE() {                                                    \
-    if (_templ) {                                                              \
-      target->Set(v8::String::NewSymbol(V8_NAME), v8::Handle<v8::Function>(_templ->GetFunction()));\
+    if (templ_) {                                                              \
+      target->Set(v8::String::NewSymbol(V8_NAME), v8::Handle<v8::Function>(templ_->GetFunction()));\
       return;                                                                  \
     }                                                                          \
     V8_HANDLE_SCOPE(scope);                                                    \
@@ -538,8 +533,8 @@ inline bool Bool(v8::Handle<v8::Value> hdl) {
 #define NODE_ETYPE(TYPE, V8_NAME)                                              \
   V8_ETYPE(TYPE)                                                               \
   NODE_ESDEF_TYPE(TYPE) {                                                      \
-    if (_templ) {                                                              \
-      target->Set(v8::String::NewSymbol(V8_NAME), v8::Handle<v8::Function>(_templ->GetFunction()));\
+    if (templ_) {                                                              \
+      target->Set(v8::String::NewSymbol(V8_NAME), v8::Handle<v8::Function>(templ_->GetFunction()));\
       return;                                                                  \
     }                                                                          \
     V8_HANDLE_SCOPE(scope);                                                    \
