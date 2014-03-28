@@ -379,12 +379,16 @@ inline v8::Handle<v8::Boolean> Bool(bool boolean) {
   return v8::Boolean::New(boolean);
 }
 
-inline v8::Local<v8::Function> Func(v8::InvocationCallback function) {
-  return v8::FunctionTemplate::New(function)->GetFunction();
+inline v8::Local<v8::Function> Func(v8::InvocationCallback function, const char* name = NULL) {
+  v8::Local<v8::FunctionTemplate> templ = v8::FunctionTemplate::New(function);
+  if (name) templ->SetClassName(v8::String::New(name));
+  return templ->GetFunction();
 }
 
-inline v8::Local<v8::FunctionTemplate> Template(v8::InvocationCallback function) {
-  return v8::FunctionTemplate::New(function);
+inline v8::Local<v8::FunctionTemplate> Template(v8::InvocationCallback function, const char* name = NULL) {
+  v8::Local<v8::FunctionTemplate> templ = v8::FunctionTemplate::New(function);
+  if (name) templ->SetClassName(v8::String::New(name));
+  return templ;
 }
 
 // Type casting/unwraping shortcuts
@@ -421,7 +425,7 @@ inline v8::Persistent<v8::Array> Arr(v8::Persistent<v8::Value> hdl) {
   return v8::Persistent<v8::Array>::Cast(hdl);
 }
 
-inline v8::Handle<v8::Function> Func(v8::Handle<v8::Value> hdl) {
+inline v8::Handle<v8::Function> Func(v8::Handle<v8::Value> hdl, const char*) {
   return v8::Handle<v8::Function>::Cast(hdl);
 }
 inline v8::Local<v8::Function> Func(v8::Local<v8::Value> hdl) {
