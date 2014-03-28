@@ -85,29 +85,29 @@ public:
   } V8_CB_END()
 
   //Getters
-  V8_GET(GetMajor) {
+  static V8_GET(GetMajor) {
     Version* inst = Unwrap(info.Holder());
     V8_RET(Int(inst->major_));
   } V8_GET_END()
-  V8_GET(GetMinor) {
+  static V8_GET(GetMinor) {
     Version* inst = Unwrap(info.Holder());
     V8_RET(Int(inst->minor_));
   } V8_GET_END()
-  V8_GET(GetRevision) {
+  static V8_GET(GetRevision) {
     Version* inst = Unwrap(info.Holder());
     V8_RET(Int(inst->revision_));
   } V8_GET_END()
 
   //Setters
-  V8_SET(SetMajor) {
+  static V8_SET(SetMajor) {
     Version* inst = Unwrap(info.Holder());
     inst->major_ = Int(value);
   } V8_SET_END()
-  V8_SET(SetMinor) {
+  static V8_SET(SetMinor) {
     Version* inst = Unwrap(info.Holder());
     inst->minor_ = Int(value);
   } V8_SET_END()
-  V8_SET(SetRevision) {
+  static V8_SET(SetRevision) {
     Version* inst = Unwrap(info.Holder());
     inst->revision_ = Int(value);
   } V8_SET_END()

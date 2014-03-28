@@ -459,7 +459,7 @@ inline bool Bool(v8::Handle<v8::Value> hdl) {
 
 #define V8_DEF_TYPE(V8_NAME)                                                   \
   templ = v8::Persistent<v8::FunctionTemplate>::New(                           \
-      v8::FunctionTemplate::New(NewInstance));                                 \
+      v8::FunctionTemplate::New(&NewInstance));                                \
   __cname = v8::String::NewSymbol(V8_NAME);                                    \
   templ->SetClassName(__cname);                                                \
   inst = templ->InstanceTemplate();                                            \
@@ -467,15 +467,15 @@ inline bool Bool(v8::Handle<v8::Value> hdl) {
   prot = templ->PrototypeTemplate();
 
 #define V8_DEF_ACC(V8_NAME, GETTER, SETTER)                                    \
-  inst->SetAccessor(v8::String::NewSymbol(V8_NAME), GETTER, SETTER)
+  inst->SetAccessor(v8::String::NewSymbol(V8_NAME), &GETTER, &SETTER)
 
 #define V8_DEF_GET(V8_NAME, GETTER)                                            \
-  inst->SetAccessor(v8::String::NewSymbol(V8_NAME), GETTER)
+  inst->SetAccessor(v8::String::NewSymbol(V8_NAME), &GETTER)
 
 //FIXME: add V8_DEF_SET
 
 #define V8_DEF_CB(V8_NAME, CPP_METHOD)                                         \
-  inst->Set(v8u::Symbol(V8_NAME), v8u::Func(CPP_METHOD))
+  inst->Set(v8u::Symbol(V8_NAME), v8u::Func(&CPP_METHOD))
 
 #define V8_INHERIT(CPP_TYPE) templ->Inherit(CPP_TYPE::templ_)
 
@@ -546,7 +546,7 @@ inline bool Bool(v8::Handle<v8::Value> hdl) {
     V8_DEF_TYPE(V8_NAME)
 
 #define NODE_TYPE_END()                                                        \
-    _templ = *templ;                                                           \
+    templ_ = *templ;                                                           \
   NODE_DEF_TYPE_END()
 
 };
