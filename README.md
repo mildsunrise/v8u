@@ -6,7 +6,8 @@ code for just having the skeleton of it.
 Sure, the V8 syntax is very **verbose** and repetitive.
 
 With V8U, that will change.  
-V8U has a special emphasis on **speed**, **simplicity** and **flexibility**.
+V8U has a special emphasis on **speed**, **simplicity** and **flexibility**.  
+In fact, it's just a set of macros to kill the repetitive writing.
 
 V8U is quite **fast**, and will make your modules **safer**
 without you notice.
