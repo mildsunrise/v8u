@@ -43,13 +43,13 @@ namespace v8u {
   //#define __node_isolate node::node_isolate
   //#define __node_isolate info.GetIsolate()
   #define __node_isolate v8::Isolate::GetCurrent()
-  
+
   #if NODE_VERSION_AT_LEAST(0,11,9)
-    #define V8_STHROW_NR(VALUE)  __node_isolate->ThrowException(VALUE) 
+    #define V8_STHROW_NR(VALUE)  __node_isolate->ThrowException(VALUE)
   #else
     #define V8_STHROW_NR(VALUE) v8::ThrowException(VALUE)
   #endif
-  
+
   #define V8_STHROW(VALUE) {V8_STHROW_NR(VALUE); return;}
   #define V8_HANDLE_SCOPE(VARIABLE) v8::HandleScope scope (__node_isolate)
   #define V8_RET(VALUE) {info.GetReturnValue().Set(VALUE); return;}
