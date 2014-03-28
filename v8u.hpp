@@ -201,15 +201,15 @@ V8_SSET(IDENTIFIER) {                                                          \
 // Type functions
 
 #if NODE_VERSION_AT_LEAST(0,11,4)
-  #define __node_handle_pollyfill
+  #define __node_handle_polyfill
 #else
-  #define __node_handle_pollyfill                                              \
-    inline v8::Handle<v8::Object> handle() {return handle_}
+  #define __node_handle_polyfill                                               \
+    inline v8::Persistent<v8::Object> persistent() {return handle_;}
 #endif
 
 #define V8_STYPE(CPP_TYPE)                                                     \
   static v8::FunctionTemplate* templ_;                                         \
-  __node_handle_pollyfill                                                      \
+  __node_handle_polyfill                                                       \
   /**
    * Returns the unique V8 v8::Object corresponding to this C++ instance.
    * For this to work, you should use V8_CL_CTOR.
@@ -223,7 +223,7 @@ V8_SSET(IDENTIFIER) {                                                          \
 
 #define V8_TYPE(CPP_TYPE)                                                      \
   static v8::FunctionTemplate* templ_;                                         \
-  __node_handle_pollyfill                                                      \
+  __node_handle_polyfill                                                       \
   /**
    * Returns the unique V8 v8::Object corresponding to this C++ instance.
    * For this to work, you should use V8_[E]CTOR.
@@ -235,7 +235,7 @@ V8_SSET(IDENTIFIER) {                                                          \
   virtual v8::Local<v8::Object> Wrapped() {                                    \
     V8_HANDLE_SCOPE(scope);                                                    \
                                                                                \
-    v8::Handle<v8::Object> handle = this->handle();                            \
+    v8::Handle<v8::Object> handle = this->persistent();                        \
     if (handle.IsEmpty()) {                                                    \
       v8::Handle<v8::Value> args [1] = {v8::External::New(this)};              \
       handle = templ_->GetFunction()->NewInstance(1,args);                     \
@@ -255,7 +255,7 @@ V8_SSET(IDENTIFIER) {                                                          \
   v8::Local<v8::Object> TYPE::Wrapped() {                                      \
     V8_HANDLE_SCOPE(scope);                                                    \
                                                                                \
-    v8::Handle<v8::Object> handle = this->handle();                            \
+    v8::Handle<v8::Object> handle = this->persistent();                        \
     if (handle.IsEmpty()) {                                                    \
       v8::Handle<v8::Value> args [1] = {v8::External::New(this)};              \
       handle = templ_->GetFunction()->NewInstance(1,args);                     \
