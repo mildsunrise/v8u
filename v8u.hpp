@@ -89,8 +89,10 @@ namespace v8u {
 // JS arguments
 
 #if NODE_VERSION_AT_LEAST(0,11,8)
+  #define __v8_callback_type v8::FunctionCallback
   #define __v8_arguments_type v8::FunctionCallbackInfo<v8::Value>
 #else
+  #define __v8_callback_type v8::InvocationCallback
   #define __v8_arguments_type v8::Arguments
 #endif
 
@@ -379,16 +381,27 @@ inline v8::Handle<v8::Boolean> Bool(bool boolean) {
   return v8::Boolean::New(boolean);
 }
 
-inline v8::Local<v8::Function> Func(v8::InvocationCallback function, const char* name = NULL) {
-  v8::Local<v8::FunctionTemplate> templ = v8::FunctionTemplate::New(function);
-  if (name) templ->SetClassName(v8::String::New(name));
-  return templ->GetFunction();
+inline v8::Local<v8::Function> Func(__v8_callback_type function, const char* name = NULL) {
+  v8::HandleScope scope;
+  v8::Local<v8::Function> func = v8::FunctionTemplate::New(function)->GetFunction();
+  if (name) func->SetName(v8::String::NewSymbol(name));
+  return scope.Close(func);
 }
 
-inline v8::Local<v8::FunctionTemplate> Template(v8::InvocationCallback function, const char* name = NULL) {
+inline v8::Local<v8::FunctionTemplate> Template(__v8_callback_type function, const char* classname = NULL) {
+  v8::HandleScope scope;
   v8::Local<v8::FunctionTemplate> templ = v8::FunctionTemplate::New(function);
-  if (name) templ->SetClassName(v8::String::New(name));
-  return templ;
+  if (classname) templ->SetClassName(v8::String::NewSymbol(classname));
+  return scope.Close(templ);
+}
+
+inline v8::Local<v8::Function> SetMethod(v8::Handle<v8::Object> target, __v8_callback_type function, const char* name) {
+  v8::HandleScope scope;
+  v8::Local<v8::Function> func = v8::FunctionTemplate::New(function)->GetFunction();
+  v8::Local<v8::String> name_ = v8::String::NewSymbol(name);
+  func->SetName(name_);
+  target->Set(name_, func);
+  return scope.Close(func);
 }
 
 // Type casting/unwraping shortcuts
