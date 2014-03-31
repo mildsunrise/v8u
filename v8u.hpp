@@ -169,8 +169,10 @@ V8_SSET(IDENTIFIER) {                                                          \
 #define __v8_ctor {                                                            \
   v8::Local<v8::Object> hdl = info.This();                                     \
   if (info[0]->IsExternal()) return hdl;                                       \
-  if (!info.IsConstructCall())                                                 \
-    V8_STHROW(v8u::ReferenceErr("You must call this as a constructor"));       \
+  if (!info.IsConstructCall()) {                                               \
+    v8::Handle<v8::Value> args [1] = {v8::External::New(NULL)};                \
+    hdl = templ_->GetFunction()->NewInstance(1,args);                          \
+  }                                                                            \
   V8_WRAP_START()
 
 #define V8_SCTOR() static V8_SCB(NewInstance)
@@ -181,7 +183,7 @@ V8_SSET(IDENTIFIER) {                                                          \
 
 #define V8_CTOR_END()                                                          \
   V8_WRAP_END()                                                                \
-  __v8_implicit_return(hdl)                                                    \
+  return hdl;                                                                  \
 }
 
 // Special constructors: use within V8_[E]SCTOR() ------------------------------
@@ -193,7 +195,7 @@ V8_SSET(IDENTIFIER) {                                                          \
 //------------------------------------------------------------------------------
 
 //// For use with V8_CTOR only!
-#define V8_WRAP(INSTANCE) (INSTANCE)->Wrap(hdl)
+#define V8_WRAP(INSTANCE) (INSTANCE)->Wrap(hdl);
 
 #define V8_M_UNWRAP(CPP_TYPE, OBJ)                                             \
   if (!CPP_TYPE::templ_->HasInstance(OBJ))                                     \
