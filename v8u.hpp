@@ -45,7 +45,7 @@ namespace v8u {
   #define __node_isolate v8::Isolate::GetCurrent()
 
   #if NODE_VERSION_AT_LEAST(0,11,9)
-    #define V8_STHROW_NR(VALUE)  __node_isolate->ThrowException(VALUE)
+    #define V8_STHROW_NR(VALUE)  __node_isolate->ThrowException(v8::Local<v8::Value>::New(__node_isolate, VALUE))
   #else
     #define V8_STHROW_NR(VALUE) v8::ThrowException(VALUE)
   #endif
@@ -58,7 +58,7 @@ namespace v8u {
   #define V8_STHROW_NR(VALUE) v8::ThrowException(VALUE)
   #define V8_STHROW(VALUE) return V8_STHROW_NR(VALUE)
   #define V8_HANDLE_SCOPE(VARIABLE) v8::HandleScope scope
-  #define V8_RET(VALUE) return scope.Close(VALUE)
+  #define V8_RET(VALUE) return VALUE;
   #define __v8_implicit_return(HANDLE) return HANDLE;
 #endif
 
@@ -78,8 +78,6 @@ namespace v8u {
     V8_STHROW_NR(v8::Exception::Error(v8::String::New(err.what())));           \
   } catch (v8::Handle<v8::Value>& err) {                                       \
     V8_STHROW_NR(err);                                                         \
-  } catch (v8::Value*& err) {                                                  \
-    V8_STHROW_NR(v8::Handle<v8::Value>(err));                                  \
   } catch (std::string& err) {                                                 \
     V8_STHROW_NR(v8::Exception::Error(v8::String::New(err.data(), err.length())));\
   } catch (...) {                                                              \
@@ -168,7 +166,7 @@ V8_SSET(IDENTIFIER) {                                                          \
 
 #define __v8_ctor {                                                            \
   v8::Local<v8::Object> hdl = info.This();                                     \
-  if (info[0]->IsExternal()) return hdl;                                       \
+  if (info[0]->IsExternal()) V8_RET(hdl);                                      \
   if (!info.IsConstructCall()) {                                               \
     v8::Handle<v8::Value> args [1] = {v8::External::New(NULL)};                \
     hdl = templ_->GetFunction()->NewInstance(1,args);                          \
@@ -183,7 +181,7 @@ V8_SSET(IDENTIFIER) {                                                          \
 
 #define V8_CTOR_END()                                                          \
   V8_WRAP_END()                                                                \
-  return hdl;                                                                  \
+  V8_RET(hdl);                                                                 \
 }
 
 // Special constructors: use within V8_[E]SCTOR() ------------------------------
@@ -205,10 +203,13 @@ V8_SSET(IDENTIFIER) {                                                          \
 // Type functions
 
 #if NODE_VERSION_AT_LEAST(0,11,4)
-  #define __node_handle_polyfill
+  #define __node_handle_polyfill                                               \
+    inline v8::Handle<v8::Object> persistentHandle() {                         \
+      return v8::Local<v8::Object>::New(__node_isolate, persistent());         \
+    }
 #else
   #define __node_handle_polyfill                                               \
-    inline v8::Persistent<v8::Object> persistent() {return handle_;}
+    inline v8::Handle<v8::Object> persistentHandle() {return handle_;}
 #endif
 
 #define V8_STYPE(CPP_TYPE)                                                     \
@@ -239,7 +240,7 @@ V8_SSET(IDENTIFIER) {                                                          \
   virtual v8::Local<v8::Object> Wrapped() {                                    \
     V8_HANDLE_SCOPE(scope);                                                    \
                                                                                \
-    v8::Handle<v8::Object> handle = this->persistent();                        \
+    v8::Handle<v8::Object> handle = this->persistentHandle();                  \
     if (handle.IsEmpty()) {                                                    \
       v8::Handle<v8::Value> args [1] = {v8::External::New(this)};              \
       handle = templ_->GetFunction()->NewInstance(1,args);                     \
@@ -259,7 +260,7 @@ V8_SSET(IDENTIFIER) {                                                          \
   v8::Local<v8::Object> TYPE::Wrapped() {                                      \
     V8_HANDLE_SCOPE(scope);                                                    \
                                                                                \
-    v8::Handle<v8::Object> handle = this->persistent();                        \
+    v8::Handle<v8::Object> handle = this->persistentHandle();                  \
     if (handle.IsEmpty()) {                                                    \
       v8::Handle<v8::Value> args [1] = {v8::External::New(this)};              \
       handle = templ_->GetFunction()->NewInstance(1,args);                     \
