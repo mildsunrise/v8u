@@ -1,3 +1,9 @@
+This is now **completely deprecated**; use the (Node.JS maintained) [NAN](https://github.com/nodejs/nan).
+
+They have far more documentation, support for Node.JS 0.12, much nicer syntax and a [handy porting guide](https://github.com/nodejs/nan#porting). It's heavier than V8U though.
+
+---
+
 # V8U[tilities]<br/><small>Sugar for your Node C++ addons</small>
 
 Have you ever written a C/C++ addon for Node.JS?  
